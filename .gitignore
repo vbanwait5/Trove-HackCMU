@@ -12,6 +12,5 @@ env__
 
 #src
 *.sqlite3
-
 .env
 yarn.lock
