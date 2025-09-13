@@ -11,7 +11,11 @@ env__
 /staticfiles/
 
 #src
+<<<<<<< HEAD
 *.sqlite
+=======
+*.sqlite3
+>>>>>>> d753434 (add goals tracker not yet working)
 
 .env
 yarn.lock
