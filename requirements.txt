@@ -31,5 +31,8 @@ django-dbbackup==4.2.1
 # Google Gemini client
 google-generativeai>=0.8.0
 
+#plaid
+plaid-python>=36
+
 # Markdown rendering (pick one)
 Markdown>=3.5.0    # official Python Markdown library

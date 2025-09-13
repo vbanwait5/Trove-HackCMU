@@ -9,6 +9,46 @@ import markdown2
 from pathlib import Path
 from django.conf import settings
 from .plaid_pull import sync_plaid_to_sqlite
+from importlib.machinery import SourceFileLoader
+import sqlite3, os
+
+def sync_plaid_to_sqlite(json_plaid_path, db_path, loader_path, bills_json_path=None, wipe_transactions=True):
+    """
+    Drops transactions + transaction_categories, then re-creates them by running your loader
+    on plaid_latest.json and (optionally) bills.json. Returns simple table counts.
+    """
+    db_path = str(db_path)
+    # 1) Drop the two tables (safe even if they don't exist yet)
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    if wipe_transactions:
+        cur.executescript("""
+            PRAGMA foreign_keys=OFF;
+            DROP TABLE IF EXISTS transaction_categories;
+            DROP TABLE IF EXISTS transactions;
+            PRAGMA foreign_keys=ON;
+        """)
+    conn.commit()
+    conn.close()
+
+    # 2) Import the loader module from its file path and call load(...)
+    loader_mod = SourceFileLoader("loader_bills", str(loader_path)).load_module()
+    loader_mod.load(str(json_plaid_path), db_path)
+    if bills_json_path and os.path.exists(str(bills_json_path)):
+        loader_mod.load(str(bills_json_path), db_path)
+
+    # 3) Return quick counts for debugging
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    counts = {}
+    for tbl in ("accounts","transactions","transaction_categories","items","meta","cards"):
+        try:
+            cur.execute(f"SELECT COUNT(*) FROM {tbl}")
+            counts[tbl] = cur.fetchone()[0]
+        except sqlite3.OperationalError:
+            counts[tbl] = 0
+    conn.close()
+    return counts
 
 
 @login_required
@@ -316,22 +356,30 @@ def get_summary():
 
 @csrf_exempt
 def spending_dashboard(request):
-       # --- auto-sync Plaid Sandbox into SQLite on each page load ---
+     # --- auto-sync Plaid Sandbox into SQLite on each page load ---
     try:
         base = Path(settings.BASE_DIR)
-        json_path   = (base / "plaid_latest.json").resolve()
-        loader_path = (base / "load_bills_to_sqlite.py").resolve()
+        json_plaid   = (base / "plaid_latest.json").resolve()
+        json_bills   = (base / "bills.json").resolve()    # optional
+        loader_path  = (base / "load_bills_to_sqlite.py").resolve()
 
-        # Use the SAME DB file Django uses (absolute path)
+        # Use the SAME DB file Django uses
         if settings.DATABASES["default"]["ENGINE"].endswith("sqlite3"):
             db_path = Path(settings.DATABASES["default"]["NAME"]).resolve()
         else:
             db_path = (base / "db.sqlite3").resolve()
 
-        counts = sync_plaid_to_sqlite(json_path, db_path, loader_path)
+        counts = sync_plaid_to_sqlite(
+            json_plaid_path=json_plaid,
+            db_path=db_path,
+            loader_path=loader_path,
+            bills_json_path=json_bills if json_bills.exists() else None,
+            wipe_transactions=True,   # <— the destructive refresh you asked for
+        )
         print("[spending_dashboard] Post-load counts:", counts)
     except Exception as e:
         print("Plaid sandbox sync skipped:", e)
+
 
     analysis = None
 
@@ -427,7 +475,7 @@ def spending_dashboard(request):
             "color": color,
         })
 
-    budget = sum(float(g["limit_amount"]) for g in goals) if goals else 1200
+    budget = sum(float(g["limit_amount"]) for g in goals) if goals else 2000
 
     return render(
         request,

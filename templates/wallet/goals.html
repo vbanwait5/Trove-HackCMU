@@ -10,7 +10,7 @@
     </div>
     <div class="text-right">
       <div class="text-xs uppercase opacity-60">Budget (this period)</div>
-      <div class="text-2xl font-semibold">${{ budget|default:1000 }}</div>
+      <div class="text-2xl font-semibold">${{ 2000|default:2000 }}</div>
     </div>
   </div>
 
@@ -255,7 +255,7 @@
   const budget = (() => {
     const raw = "{{ budget|default:1000 }}";
     const num = parseFloat(String(raw).replace(/[^0-9.-]/g, ''));
-    return Number.isFinite(num) ? num : 1000;
+    return 2000;
   })();
 
   // --- Transactions: sanitize amount values ---
