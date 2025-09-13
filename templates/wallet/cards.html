@@ -1,60 +1,169 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
-<div class="container mt-4">
-  <div class="row">
-    <div class="col-12">
-      <h2 class="mb-4">My Cards</h2>
-      <div class="list-group mb-4">
-        {% if cards %}
-          {% for card in cards %}
-            <a href="#{{ card.name|slugify }}" class="list-group-item list-group-item-action">
-              <strong>{{ card.name }}</strong> ({{ card.issuer }}) - Base rate: {{ card.base_reward_rate }}x
-            </a>
-          {% endfor %}
-        {% endif %}
-        <a href="#chase-freedom" class="list-group-item list-group-item-action">
-          <strong>Chase Freedom</strong>
-        </a>
-        <a href="#costco-visa" class="list-group-item list-group-item-action">
-          <strong>Costco Visa</strong>
-        </a>
-        {% if not cards %}
-          <span class="list-group-item text-muted">No cards yet.</span>
-        {% endif %}
+<style>
+  .card-standard {
+    height: 370px;       /* same height for all cards */
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+</style>
+
+<div class="container-md px-4 my-5">
+  <!-- Header -->
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h1 class="h3 fw-bold mb-1">My Cards</h1>
+      <div class="text-muted small">
+        Manage your credit cards — see annual fees, bonus categories, and perks.
       </div>
+    </div>
+    <div class="text-end">
+      <div class="text-uppercase small text-muted">Total Annual Fee</div>
+      <div class="fs-4 fw-semibold">${{ total_fee|floatformat:2 }}</div>
     </div>
   </div>
 
-  <div class="row">
-    <div class="col-md-6 mb-4">
-      <div class="card" id="chase-freedom">
+  <!-- Card List Links -->
+  <div class="list-group mb-4">
+    {% if cards %}
+      {% for c in cards %}
+        <a href="#{{ c.card_name|slugify }}" class="list-group-item list-group-item-action">
+          <strong>{{ c.card_name }}</strong>
+          <span class="text-muted">({{ c.issuer|default:"—" }})</span>
+        </a>
+      {% endfor %}
+    {% else %}
+      <span class="list-group-item text-muted">No cards yet.</span>
+    {% endif %}
+  </div>
+
+  <!-- Cards Grid -->
+  <div class="row g-4">
+    {% for c in cards|dictsort:"annual_fee" %}
+    <div class="col-md-6">
+      <div class="card card-standard" id="{{ c.card_name|slugify }}" style="border-radius:14px;box-shadow:0 8px 24px -12px rgba(0,0,0,.15)">
         <div class="card-body">
-          <h4 class="card-title">Chase Freedom</h4>
-          <p>
-            <strong>APR:</strong> 19.99%<br>
-            <strong>Annual Fee:</strong> $0
-          </p>
-          <p>
-            The Chase Freedom card offers 1.5% cash back on all purchases, rotating 5% categories each quarter, and has no annual fee.
-          </p>
+          <!-- Card Header -->
+          <div class="d-flex align-items-start justify-content-between">
+            <div>
+              <h4 class="card-title mb-1">{{ c.card_name }}</h4>
+              <div class="small text-muted">
+                <span class="badge bg-light border text-dark">{{ c.issuer|default:"—" }}</span>
+                {% if c.type %}<span class="badge bg-light border text-dark ms-1">{{ c.type }}</span>{% endif %}
+              </div>
+            </div>
+            <div class="text-end small">
+              <div class="text-uppercase text-muted">Annual Fee</div>
+              <div class="fw-semibold">${{ c.annual_fee|floatformat:0 }}</div>
+              <div class="text-muted">Base: {{ c.base_reward_rate|floatformat:2 }}x</div>
+            </div>
+          </div>
+
+          <!-- Current Period -->
+          {% if c.current_period %}
+          <div class="mt-3 small text-muted">
+            Period: <span class="fw-semibold">{{ c.current_period.start_date }} → {{ c.current_period.end_date }}</span>
+          </div>
+          {% endif %}
+
+          <!-- Welcome Bonus -->
+          {% if c.welcome_bonus %}
+          <div class="mt-3 p-3 rounded border bg-light">
+            <div class="fw-semibold mb-1">Welcome Offer</div>
+            <div class="small">
+              {% if c.welcome_bonus.points %}<span class="me-2"><b>{{ c.welcome_bonus.points|floatformat:0 }}</b> pts</span>{% endif %}
+              {% if c.welcome_bonus.cash_back %}<span class="me-2"><b>${{ c.welcome_bonus.cash_back|floatformat:0 }}</b> cash</span>{% endif %}
+              {% if c.welcome_bonus.points_or_cash %}<span class="me-2"><b>{{ c.welcome_bonus.points_or_cash|floatformat:0 }}</b> equiv</span>{% endif %}
+              {% if c.welcome_bonus.spend_requirement %}<span class="me-2">after spend <b>${{ c.welcome_bonus.spend_requirement|floatformat:0 }}</b></span>{% endif %}
+              {% if c.welcome_bonus.time_frame_months %}<span>in <b>{{ c.welcome_bonus.time_frame_months }}</b> mo</span>{% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Bonus Categories -->
+          {% if c.bonus_categories %}
+          <div class="mt-3">
+            <div class="fw-semibold mb-2">Bonus Categories</div>
+            <div class="d-flex flex-wrap gap-2">
+              {% for bc in c.bonus_categories %}
+                <span class="badge bg-white border text-dark">
+                  <span class="fw-semibold">{{ bc.category_name }}</span>
+                  {% if bc.reward_rate %}<span class="text-muted"> · {{ bc.reward_rate|floatformat:2 }}x</span>{% endif %}
+                  {% if bc.cap %}<span class="text-muted"> · cap ${{ bc.cap|floatformat:0 }}</span>{% endif %}
+                  {% if bc.note %}<span class="text-muted"> · {{ bc.note }}</span>{% endif %}
+                </span>
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Perks -->
+          {% if c.perks %}
+          <div class="mt-3">
+            <div class="fw-semibold mb-2">Perks</div>
+            <ul class="list-unstyled mb-0">
+              {% for p in c.perks %}
+              <li class="d-flex align-items-start mb-1">
+                <span class="me-2 mt-1 rounded-circle" style="width:6px;height:6px;background:#94a3b8;display:inline-block"></span>
+                <div>
+                  <div class="fw-semibold">{{ p.perk_name }}</div>
+                  {% if p.description or p.frequency %}
+                    <div class="small text-muted">
+                      {% if p.description %}{{ p.description }}{% endif %}
+                      {% if p.frequency %}<span class="ms-1">({{ p.frequency }})</span>{% endif %}
+                    </div>
+                  {% endif %}
+                </div>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>
-    <div class="col-md-6 mb-4">
-      <div class="card" id="costco-visa">
-        <div class="card-body">
-          <h4 class="card-title">Costco Visa</h4>
-          <p>
-            <strong>APR:</strong> 1.99%<br>
-            <strong>Annual Fee:</strong> $0
-          </p>
-          <p>
-            The Costco Visa card offers 4% cash back on eligible gas purchases (including at Costco) for the first $7,000 per year, 3% on restaurants and eligible travel, 2% on all other purchases from Costco and Costco.com, and 1% on all other purchases. There is no annual fee with your paid Costco membership.
-          </p>
-        </div>
-      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Bar Chart -->
+  <div class="row mt-5">
+    <div class="col-12">
+      <canvas id="feeBarChart" height="100"></canvas>
     </div>
   </div>
 </div>
+
+<!-- Chart.js Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const cardData = [
+    {% for c in cards|dictsort:"annual_fee" %}
+      {name: "{{ c.card_name|escapejs }}", fee: {{ c.annual_fee|floatformat:2 }}},
+    {% endfor %}
+  ];
+  const cardNames = cardData.map(c => c.name);
+  const cardFees = cardData.map(c => c.fee);
+
+  const ctx = document.getElementById('feeBarChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: cardNames,
+      datasets: [{
+        label: 'Annual Fee ($)',
+        data: cardFees,
+        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: { x: { beginAtZero: true } },
+      plugins: { legend: { display: false }, title: { display: true, text: 'Annual Fee by Card' } }
+    }
+  });
+</script>
 {% endblock %}

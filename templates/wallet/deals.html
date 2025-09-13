@@ -1,200 +1,182 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
-<div class="mx-auto max-w-6xl p-6">
+<div class="container-md px-4 my-5">
   <!-- Header -->
-  <div class="flex items-center justify-between mb-6">
+  <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
-      <h1 class="text-3xl font-bold tracking-tight">Card Perks & Bonuses</h1>
-      <p class="text-sm opacity-70">Explore rewards, categories, and welcome offers for your cards.</p>
-    </div>
-    <div class="text-right">
-      <div class="text-xs uppercase opacity-60">Cards Loaded</div>
-      <div class="text-2xl font-semibold">{{ cards|length }}</div>
-    </div>
-  </div>
-
-  <!-- Controls -->
-  <div class="rounded-2xl shadow-md p-4 bg-white/70 backdrop-blur border border-slate-100 mb-6">
-    <div class="grid gap-3" style="grid-template-columns: 2fr 1fr 1fr;">
-      <input id="search" type="text" placeholder="Search cards, issuer, perks…"
-             class="w-full p-2 rounded-lg border border-slate-200" />
-      <select id="issuer" class="w-full p-2 rounded-lg border border-slate-200">
-        <option value="">All issuers</option>
-        {% for iss in issuers %}
-          <option value="{{ iss|escape }}">{{ iss }}</option>
-        {% endfor %}
-      </select>
-      <select id="sort" class="w-full p-2 rounded-lg border border-slate-200">
-        <option value="name-asc" selected>Sort: Name ↑</option>
-        <option value="name-desc">Sort: Name ↓</option>
-        <option value="fee-asc">Sort: Annual Fee ↑</option>
-        <option value="fee-desc">Sort: Annual Fee ↓</option>
-        <option value="rate-desc">Sort: Base Rate ↓</option>
-        <option value="rate-asc">Sort: Base Rate ↑</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- Cards -->
-  <div id="cardsGrid" class="grid gap-4"
-       style="grid-template-columns: repeat(1,minmax(0,1fr));">
-    {% for c in cards %}
-      <div class="rounded-2xl shadow-md border border-slate-100 bg-white/70 backdrop-blur p-5"
-           data-name="{{ c.card_name|lower }}"
-           data-issuer="{{ c.issuer|lower }}"
-           data-rate="{{ c.base_reward_rate|default:0 }}"
-           data-fee="{{ c.annual_fee|default:0 }}">
-        <!-- Top row -->
-        <div class="flex items-start justify-between mb-4">
-          <div>
-            <div class="text-xl font-semibold">{{ c.card_name }}</div>
-            <div class="text-sm opacity-70">
-              <span class="px-2 py-0.5 rounded-full border border-slate-200">{{ c.issuer|default:"—" }}</span>
-              {% if c.type %}<span class="ml-2 px-2 py-0.5 rounded-full border border-slate-200">{{ c.type }}</span>{% endif %}
-            </div>
-          </div>
-          <div class="text-right">
-            <div class="text-xs uppercase opacity-60">Annual Fee</div>
-            <div class="text-lg font-semibold">${{ c.annual_fee|floatformat:0 }}</div>
-            <div class="text-xs opacity-70">Base rate: {{ c.base_reward_rate|floatformat:2 }}x</div>
-          </div>
-        </div>
-
-        <!-- Current period -->
-        {% if c.current_period %}
-          <div class="mb-4 text-sm">
-            <span class="opacity-60">Current period:</span>
-            <span class="font-medium">{{ c.current_period.start_date }} → {{ c.current_period.end_date }}</span>
-          </div>
-        {% endif %}
-
-        <!-- Welcome bonus -->
-        {% if c.welcome_bonus %}
-          <div class="mb-4 p-3 rounded-xl border border-slate-200 bg-slate-50">
-            <div class="font-medium mb-1">Welcome Offer</div>
-            <div class="text-sm">
-              {% if c.welcome_bonus.points %}<span class="mr-3"><b>{{ c.welcome_bonus.points|floatformat:0 }}</b> pts</span>{% endif %}
-              {% if c.welcome_bonus.cash_back %}<span class="mr-3"><b>${{ c.welcome_bonus.cash_back|floatformat:0 }}</b> cash</span>{% endif %}
-              {% if c.welcome_bonus.points_or_cash %}<span class="mr-3"><b>{{ c.welcome_bonus.points_or_cash|floatformat:0 }}</b> equiv</span>{% endif %}
-              {% if c.welcome_bonus.spend_requirement %}
-                <span class="mr-3">after spend <b>${{ c.welcome_bonus.spend_requirement|floatformat:0 }}</b></span>
-              {% endif %}
-              {% if c.welcome_bonus.time_frame_months %}
-                <span>in <b>{{ c.welcome_bonus.time_frame_months }}</b> mo</span>
-              {% endif %}
-            </div>
-          </div>
-        {% endif %}
-
-        <!-- Bonus categories -->
-        {% if c.bonus_categories %}
-          <div class="mb-4">
-            <div class="font-medium mb-2">Bonus Categories</div>
-            <div class="flex flex-wrap" style="gap:.5rem">
-              {% for bc in c.bonus_categories %}
-                <div class="px-2 py-1 rounded-lg border border-slate-200 bg-white">
-                  <span class="font-medium">{{ bc.category_name }}</span>
-                  {% if bc.reward_rate %}<span class="opacity-70">· {{ bc.reward_rate|floatformat:2 }}x</span>{% endif %}
-                  {% if bc.cap %}<span class="opacity-70">· cap ${{ bc.cap|floatformat:0 }}</span>{% endif %}
-                  {% if bc.note %}<span class="opacity-60">· {{ bc.note }}</span>{% endif %}
-                </div>
-              {% endfor %}
-            </div>
-          </div>
-        {% endif %}
-
-        <!-- Perks list -->
-        {% if c.perks %}
-          <div>
-            <div class="font-medium mb-2">Perks</div>
-            <ul class="space-y-1">
-              {% for p in c.perks %}
-                <li class="flex items-start">
-                  <span class="mt-1 w-1.5 h-1.5 rounded-full bg-slate-400 mr-2"></span>
-                  <div>
-                    <div class="font-medium">{{ p.perk_name }}</div>
-                    {% if p.description or p.frequency %}
-                      <div class="text-sm opacity-70">
-                        {% if p.description %}{{ p.description }}{% endif %}
-                        {% if p.frequency %}<span class="ml-1">({{ p.frequency }})</span>{% endif %}
-                      </div>
-                    {% endif %}
-                  </div>
-                </li>
-              {% endfor %}
-            </ul>
-          </div>
-        {% else %}
-          <div class="text-sm opacity-70">No perks listed.</div>
-        {% endif %}
+      <h1 class="h3 fw-bold mb-1">Deals & Card Perks</h1>
+      <div class="text-muted small">
+        Best offers first — see full details on the <a href="{% url 'cards' %}">My Cards</a> page.
       </div>
-    {% empty %}
-      <div class="p-5 rounded-2xl border border-slate-200 text-center opacity-70">No cards found.</div>
-    {% endfor %}
+    </div>
+    <div class="text-end">
+      <div class="text-uppercase small text-muted">Cards Loaded</div>
+      <div class="fs-4 fw-semibold">{{ cards|length }}</div>
+    </div>
   </div>
+
+  <!-- Filter Options -->
+  <div class="mb-3">
+    <span class="fw-semibold me-2">Filter Deals:</span>
+    <div id="dealFilters" class="d-inline-block">
+      <!-- Checkboxes will be injected here -->
+    </div>
+  </div>
+
+  <!-- Deals Grid -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="h5 mb-0">Deals Spotlight</h2>
+    <div class="small text-muted" id="dealCount">0 deals</div>
+  </div>
+  <div id="dealsGrid" class="row g-4"></div>
 </div>
 
-<style>
-  :root{--radius:16px;--shadow:0 10px 25px -10px rgba(2,6,23,.15)}
-  .rounded-2xl{border-radius:var(--radius)}.shadow-md{box-shadow:var(--shadow)}
-  .bg-white\/70{background:rgba(255,255,255,.7)}
-  .border{border:1px solid rgba(15,23,42,.08)}.border-slate-100{border-color:rgba(15,23,42,.06)}.border-slate-200{border-color:rgba(15,23,42,.12)}
-  .text-3xl{font-size:1.75rem}.text-2xl{font-size:1.5rem}.text-xl{font-size:1.25rem}.font-bold{font-weight:800}.font-semibold{font-weight:700}.font-medium{font-weight:600}
-  .opacity-60{opacity:.6}.opacity-70{opacity:.7}.uppercase{text-transform:uppercase}
-  .p-6{padding:1.5rem}.p-5{padding:1.25rem}.p-4{padding:1rem}.mb-6{margin-bottom:1.5rem}.mb-4{margin-bottom:1rem}
-  .grid{display:grid}.gap-3{gap:.75rem}.gap-4{gap:1rem}
-  .flex{display:flex}.items-center{align-items:center}.items-start{align-items:flex-start}.justify-between{justify-content:space-between}
-  .mx-auto{margin-inline:auto}.max-w-6xl{max-width:72rem}
-</style>
+{# Build the deals list from cards #}
+{% for c in cards %}
+  {% if c.welcome_bonus %}
+    <script>
+      (window._deals = window._deals || []).push({
+        type: "welcome",
+        title: {% if c.welcome_bonus.points %}"{{ c.welcome_bonus.points|floatformat:0 }} pts"{% elif c.welcome_bonus.cash_back %}"${{ c.welcome_bonus.cash_back|floatformat:0 }} cash"{% elif c.welcome_bonus.points_or_cash %}"{{ c.welcome_bonus.points_or_cash|floatformat:0 }} value"{% else %}"Welcome Offer"{% endif %},
+        subtitle: {% if c.welcome_bonus.spend_requirement and c.welcome_bonus.time_frame_months %}
+          "After ${{ c.welcome_bonus.spend_requirement|floatformat:0 }} in {{ c.welcome_bonus.time_frame_months }} mo"
+        {% elif c.welcome_bonus.spend_requirement %}
+          "After ${{ c.welcome_bonus.spend_requirement|floatformat:0 }} spend"
+        {% elif c.welcome_bonus.time_frame_months %}
+          "In {{ c.welcome_bonus.time_frame_months }} months"
+        {% else %}
+          ""
+        {% endif %},
+        card: "{{ c.card_name|escapejs }}",
+        issuer: "{{ c.issuer|default:'—'|escapejs }}",
+        expires: "{{ c.current_period.end_date|default_if_none:''|escapejs }}"
+      });
+    </script>
+  {% endif %}
+
+  {% if c.perks %}
+    {% for p in c.perks %}
+      <script>
+        (window._deals = window._deals || []).push({
+          type: "perk",
+          title: "{{ p.perk_name|escapejs }}",
+          subtitle: "{% if p.frequency %}{{ p.frequency|escapejs }}{% elif p.description %}{{ p.description|escapejs }}{% else %}{% endif %}",
+          card: "{{ c.card_name|escapejs }}",
+          issuer: "{{ c.issuer|default:'—'|escapejs }}",
+          expires: "{{ c.current_period.end_date|default_if_none:''|escapejs }}"
+        });
+      </script>
+    {% endfor %}
+  {% endif %}
+
+  {% if c.bonus_categories %}
+    {% for bc in c.bonus_categories %}
+      <script>
+        (window._deals = window._deals || []).push({
+          type: "category",
+          title: "{{ bc.category_name|escapejs }}{% if bc.reward_rate %} · {{ bc.reward_rate|floatformat:2 }}x{% endif %}",
+          subtitle: "{% if bc.cap %}Cap ${{ bc.cap|floatformat:0 }}{% if bc.note %} · {{ bc.note|escapejs }}{% endif %}{% else %}{% if bc.note %}{{ bc.note|escapejs }}{% endif %}{% endif %}",
+          card: "{{ c.card_name|escapejs }}",
+          issuer: "{{ c.issuer|default:'—'|escapejs }}",
+          expires: "{{ c.current_period.end_date|default_if_none:''|escapejs }}"
+        });
+      </script>
+    {% endfor %}
+  {% endif %}
+{% endfor %}
 
 <script>
 (function(){
-  const q = document.getElementById('search');
-  const issuer = document.getElementById('issuer');
-  const sort = document.getElementById('sort');
-  const grid = document.getElementById('cardsGrid');
+  const allDeals = (window._deals || []).filter(Boolean);
 
-  function match(card, needle){
-    if (!needle) return true;
-    const txt = (card.dataset.name + " " + card.dataset.issuer + " " + card.textContent).toLowerCase();
-    return txt.includes(needle);
-  }
+  // 1. Get unique deal types/tags for filter checkboxes
+  const tags = Array.from(new Set(allDeals.map(d=>{
+    if(d.type==='welcome') return 'Welcome';
+    if(d.type==='perk') return 'Perk';
+    if(d.type==='category') {
+      if(d.title.includes('Travel')) return 'Travel';
+      if(d.title.includes('Food')) return 'Food';
+      return 'Misc';
+    }
+    return 'Other';
+  })));
 
-  function apply(){
-    const needle = (q.value || "").toLowerCase().trim();
-    const iss = (issuer.value || "").toLowerCase();
-    const children = Array.from(grid.children);
+  // 2. Render filter checkboxes
+  const filterContainer = document.getElementById('dealFilters');
+  tags.forEach(tag=>{
+    const id = 'filter-'+tag;
+    filterContainer.innerHTML += `
+      <div class="form-check form-check-inline">
+        <input class="form-check-input deal-filter" type="checkbox" id="${id}" value="${tag}" checked>
+        <label class="form-check-label" for="${id}">${tag}</label>
+      </div>
+    `;
+  });
 
-    // Filter
-    children.forEach(el=>{
-      const okSearch = match(el, needle);
-      const okIssuer = !iss || (el.dataset.issuer === iss);
-      el.style.display = (okSearch && okIssuer) ? "" : "none";
-    });
+  // 3. Function to render deals based on selected filters
+  function renderDeals() {
+    const checked = Array.from(document.querySelectorAll('.deal-filter:checked')).map(i=>i.value);
+    const grid = document.getElementById('dealsGrid');
+    const count = document.getElementById('dealCount');
 
-    // Sort
-    const visible = children.filter(el => el.style.display !== "none");
-    const [key, dir] = (sort.value || "name-asc").split("-");
-    visible.sort((a,b)=>{
-      const m = dir === "asc" ? 1 : -1;
-      if (key === "fee") {
-        return (parseFloat(a.dataset.fee) - parseFloat(b.dataset.fee)) * m;
-      } else if (key === "rate") {
-        return (parseFloat(a.dataset.rate) - parseFloat(b.dataset.rate)) * m;
-      } else {
-        // name
-        return a.dataset.name.localeCompare(b.dataset.name) * m;
+    const filtered = allDeals.filter(d=>{
+      let tag = 'Other';
+      if(d.type==='welcome') tag='Welcome';
+      else if(d.type==='perk') tag='Perk';
+      else if(d.type==='category') {
+        if(d.title.includes('Travel')) tag='Travel';
+        else if(d.title.includes('Food')) tag='Food';
+        else tag='Misc';
       }
+      return checked.includes(tag);
     });
-    visible.forEach(el => grid.appendChild(el));
+
+    count.textContent = `${filtered.length} deal${filtered.length===1?'':'s'}`;
+
+    if(!filtered.length){
+      grid.innerHTML = '<div class="text-muted small">No current deals.</div>';
+      return;
+    }
+
+    grid.innerHTML = filtered.slice(0,24).map(d=>{
+      const cap = [d.card,d.issuer].filter(Boolean).join(' • ');
+      const exp = d.expires ? `Ends ${d.expires}` : '';
+      let tag = 'Other';
+      if(d.type==='welcome') tag='Welcome';
+      else if(d.type==='perk') tag='Perk';
+      else if(d.type==='category'){
+        if(d.title.includes('Travel')) tag='Travel';
+        else if(d.title.includes('Food')) tag='Food';
+        else tag='Misc';
+      }
+
+      return `
+        <div class="col-12 col-md-6">
+          <div class="card h-100" style="border-radius:14px;box-shadow:0 8px 24px -12px rgba(0,0,0,.15)">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="badge bg-light border text-dark">${tag}</span>
+              </div>
+              <div class="fw-bold" style="font-size:1.05rem">${d.title || ''}</div>
+              ${d.subtitle ? `<div class="text-muted small mt-1">${d.subtitle}</div>` : ''}
+              <div class="d-flex align-items-center justify-content-between mt-3">
+                <div class="text-muted small">${cap}</div>
+                <div class="text-muted small">${exp}</div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }).join('');
   }
 
-  q.addEventListener('input', apply);
-  issuer.addEventListener('change', apply);
-  sort.addEventListener('change', apply);
+  // 4. Initial render
+  renderDeals();
 
-  apply();
+  // 5. Attach event listeners to checkboxes
+  document.querySelectorAll('.deal-filter').forEach(cb=>{
+    cb.addEventListener('change', renderDeals);
+  });
 })();
 </script>
 {% endblock %}
