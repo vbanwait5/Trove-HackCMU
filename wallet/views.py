@@ -1,9 +1,5 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.views.decorators.http import require_POST
-from django.db import connection
-
 from .models import Transaction, Card, Deal, Goal, Subscription
 
 
@@ -216,57 +212,24 @@ def perks_dashboard(request):
     })
     
 @login_required
-def add_card(request):
-    if request.method == "POST":
-        card_name = request.POST.get("card_name")
-        issuer = request.POST.get("issuer")
-
-        try:
-            Card.objects.create(
-                name=card_name,   
-                issuer=issuer,
-                annual_fee=request.POST.get("annual_fee", 0),
-                card_type=request.POST.get("type", ""),
-                base_reward_rate=request.POST.get("base_reward_rate", 1),
-                user=request.user,    
-            )
-            messages.success(request, f"✅ {card_name} added successfully!")
-            return redirect("cards_dashboard")
-
-        except IntegrityError:
-            messages.error(request, f"❌ {card_name} from {issuer} already exists.")
-            return redirect("cards_dashboard")
-
-    return render(request, "wallet/add_card.html")
-
-
-@login_required
-def delete_card(request, card_id):
-    if request.method == "POST":
-        # delete the card by ID
-        Card.objects.filter(id=card_id).delete()
-        return redirect('/cards/')
-
-@login_required
 def cards_dashboard(request):
     with connection.cursor() as cur:
         cur.executescript("PRAGMA foreign_keys = ON;")
 
-    # --- Fetch all cards ---
     cards = {}
     with connection.cursor() as cur:
         cur.execute("""
-            SELECT id, name, issuer, COALESCE(annual_fee, 0), card_type, COALESCE(base_reward_rate, 0)
-            FROM wallet_card
-            ORDER BY issuer, name
+          SELECT id, card_name, issuer, COALESCE(annual_fee, 0), type, COALESCE(base_reward_rate, 0)
+          FROM cards
+          ORDER BY issuer, card_name
         """)
-        for cid, name, issuer, fee, card_type, base_rate in cur.fetchall():
+        for cid, name, issuer, fee, ctype, base_rate in cur.fetchall():
             cards[cid] = {
                 "id": cid,
                 "card_name": name or "",
                 "issuer": issuer or "",
                 "annual_fee": float(fee or 0),
-                "type": card_type or "",
+                "type": ctype or "",
                 "base_reward_rate": float(base_rate or 0),
                 "bonus_categories": [],
                 "perks": [],
@@ -276,12 +239,11 @@ def cards_dashboard(request):
 
     valid_ids = set(cards.keys())
 
-    # --- Bonus categories ---
     with connection.cursor() as cur:
         cur.execute("""
-            SELECT card_id, idx, category_name, reward_rate, cap, note
-            FROM bonus_categories
-            ORDER BY card_id, idx
+          SELECT card_id, idx, category_name, reward_rate, cap, note
+          FROM bonus_categories
+          ORDER BY card_id, idx
         """)
         for card_id, idx, cat_name, rate, cap, note in cur.fetchall():
             if card_id in valid_ids:
@@ -292,12 +254,11 @@ def cards_dashboard(request):
                     "note": note or "",
                 })
 
-    # --- Perks ---
     with connection.cursor() as cur:
         cur.execute("""
-            SELECT card_id, idx, perk_name, description, frequency
-            FROM perks
-            ORDER BY card_id, idx
+          SELECT card_id, idx, perk_name, description, frequency
+          FROM perks
+          ORDER BY card_id, idx
         """)
         for card_id, idx, perk_name, desc, freq in cur.fetchall():
             if card_id in valid_ids:
@@ -307,11 +268,10 @@ def cards_dashboard(request):
                     "frequency": freq or "",
                 })
 
-    # --- Welcome bonuses ---
     with connection.cursor() as cur:
         cur.execute("""
-            SELECT card_id, points, cash_back, points_or_cash, spend_requirement, time_frame_months
-            FROM welcome_bonuses
+          SELECT card_id, points, cash_back, points_or_cash, spend_requirement, time_frame_months
+          FROM welcome_bonuses
         """)
         for card_id, points, cash_back, poc, spend_req, tf_months in cur.fetchall():
             if card_id in valid_ids:
@@ -323,11 +283,10 @@ def cards_dashboard(request):
                     "time_frame_months": None if tf_months is None else int(tf_months),
                 }
 
-    # --- Current period ---
     with connection.cursor() as cur:
         cur.execute("""
-            SELECT card_id, start_date, end_date
-            FROM card_current_period
+          SELECT card_id, start_date, end_date
+          FROM card_current_period
         """)
         for card_id, start_date, end_date in cur.fetchall():
             if card_id in valid_ids:
@@ -336,7 +295,7 @@ def cards_dashboard(request):
                     "end_date": end_date,
                 }
 
-    # --- Calculate total annual fee ---
+    # Calculate total annual fee
     total_fee = sum(card["annual_fee"] for card in cards.values())
 
     return render(request, "wallet/cards.html", {
