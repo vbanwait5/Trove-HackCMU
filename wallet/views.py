@@ -2,6 +2,10 @@ from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from .models import Transaction, Card, Deal, Goal, Subscription
 import markdown2
+from pathlib import Path
+from django.conf import settings
+from .plaid_pull import sync_plaid_to_sqlite
+
 
 @login_required
 def dashboard(request):
@@ -273,6 +277,23 @@ def get_summary():
 
 @csrf_exempt
 def spending_dashboard(request):
+       # --- auto-sync Plaid Sandbox into SQLite on each page load ---
+    try:
+        base = Path(settings.BASE_DIR)
+        json_path   = (base / "plaid_latest.json").resolve()
+        loader_path = (base / "load_bills_to_sqlite.py").resolve()
+
+        # Use the SAME DB file Django uses (absolute path)
+        if settings.DATABASES["default"]["ENGINE"].endswith("sqlite3"):
+            db_path = Path(settings.DATABASES["default"]["NAME"]).resolve()
+        else:
+            db_path = (base / "db.sqlite3").resolve()
+
+        counts = sync_plaid_to_sqlite(json_path, db_path, loader_path)
+        print("[spending_dashboard] Post-load counts:", counts)
+    except Exception as e:
+        print("Plaid sandbox sync skipped:", e)
+
     analysis = None
 
     # --- Handle POST ---
