@@ -16,7 +16,13 @@
     </div>
   </div>
 
-  
+  <!-- Filter Options -->
+  <div class="mb-3">
+    <span class="fw-semibold me-2">Filter Deals:</span>
+    <div id="dealFilters" class="d-inline-block">
+      <!-- Checkboxes will be injected here -->
+    </div>
+  </div>
 
   <!-- Deals Grid -->
   <div class="d-flex align-items-center justify-content-between mb-3">
@@ -26,7 +32,7 @@
   <div id="dealsGrid" class="row g-4"></div>
 </div>
 
-{# Build the deals list from the cards context #}
+{# Build the deals list from cards #}
 {% for c in cards %}
   {% if c.welcome_bonus %}
     <script>
@@ -80,77 +86,97 @@
   {% endif %}
 {% endfor %}
 
-<!-- New JS: Travel/Food prioritized, correct tag labels -->
 <script>
 (function(){
-  const all = (window._deals || []).filter(Boolean);
-  const uniq = new Map();
-  for (const d of all) {
-    const key = (d.type||'') + '|' + (d.title||'') + '|' + (d.card||'');
-    if (!uniq.has(key)) uniq.set(key, d);
-  }
-  const deals = Array.from(uniq.values());
+  const allDeals = (window._deals || []).filter(Boolean);
 
-  const weight = { welcome: 0, perk: 1, category: 2 };
-  const priority = ['Travel', 'Food']; // prioritize Travel and Food deals
+  // 1. Get unique deal types/tags for filter checkboxes
+  const tags = Array.from(new Set(allDeals.map(d=>{
+    if(d.type==='welcome') return 'Welcome';
+    if(d.type==='perk') return 'Perk';
+    if(d.type==='category') {
+      if(d.title.includes('Travel')) return 'Travel';
+      if(d.title.includes('Food')) return 'Food';
+      return 'Misc';
+    }
+    return 'Other';
+  })));
 
-  deals.sort((a,b)=>{
-    const aPriority = priority.some(p => (a.title||'').includes(p)) ? 0 : 1;
-    const bPriority = priority.some(p => (b.title||'').includes(p)) ? 0 : 1;
-    if (aPriority !== bPriority) return aPriority - bPriority;
-
-    const wa = weight[a.type] ?? 9;
-    const wb = weight[b.type] ?? 9;
-    if (wa !== wb) return wa - wb;
-
-    const ha = (a.expires||'') ? 0 : 1;
-    const hb = (b.expires||'') ? 0 : 1;
-    if (ha !== hb) return ha - hb;
-
-    return (b.title||'').length - (a.title||'').length;
+  // 2. Render filter checkboxes
+  const filterContainer = document.getElementById('dealFilters');
+  tags.forEach(tag=>{
+    const id = 'filter-'+tag;
+    filterContainer.innerHTML += `
+      <div class="form-check form-check-inline">
+        <input class="form-check-input deal-filter" type="checkbox" id="${id}" value="${tag}" checked>
+        <label class="form-check-label" for="${id}">${tag}</label>
+      </div>
+    `;
   });
 
-  const grid = document.getElementById('dealsGrid');
-  const count = document.getElementById('dealCount');
+  // 3. Function to render deals based on selected filters
+  function renderDeals() {
+    const checked = Array.from(document.querySelectorAll('.deal-filter:checked')).map(i=>i.value);
+    const grid = document.getElementById('dealsGrid');
+    const count = document.getElementById('dealCount');
 
-  if (!deals.length){
-    grid.innerHTML = '<div class="text-muted small">No current deals.</div>';
-    count.textContent = '0 deals';
-    return;
-  }
+    const filtered = allDeals.filter(d=>{
+      let tag = 'Other';
+      if(d.type==='welcome') tag='Welcome';
+      else if(d.type==='perk') tag='Perk';
+      else if(d.type==='category') {
+        if(d.title.includes('Travel')) tag='Travel';
+        else if(d.title.includes('Food')) tag='Food';
+        else tag='Misc';
+      }
+      return checked.includes(tag);
+    });
 
-  count.textContent = `${deals.length} deal${deals.length===1?'':'s'}`;
+    count.textContent = `${filtered.length} deal${filtered.length===1?'':'s'}`;
 
-  grid.innerHTML = deals.slice(0, 24).map(d => {
-    const cap = [d.card, d.issuer].filter(Boolean).join(' • ');
-    const exp = d.expires ? `Ends ${d.expires}` : '';
-
-    let tag = 'Other';
-    if(d.type === 'welcome') tag = 'Welcome';
-    else if(d.type === 'perk') tag = 'Perk';
-    else if(d.type === 'category') {
-      if(priority.some(p => (d.title||'').includes(p))) tag = priority.find(p => (d.title||'').includes(p));
-      else tag = 'Misc';
+    if(!filtered.length){
+      grid.innerHTML = '<div class="text-muted small">No current deals.</div>';
+      return;
     }
 
-    return `
-      <div class="col-12 col-md-6">
-        <div class="card h-100" style="border-radius:14px;box-shadow:0 8px 24px -12px rgba(0,0,0,.15)">
-          <div class="card-body">
-            <div class="d-flex align-items-center justify-content-between mb-1">
-              <span class="badge bg-light border text-dark">${tag}</span>
-            </div>
-            <div class="fw-bold" style="font-size:1.05rem">${d.title || ''}</div>
-            ${d.subtitle ? `<div class="text-muted small mt-1">${d.subtitle}</div>` : ''}
-            <div class="d-flex align-items-center justify-content-between mt-3">
-              <div class="text-muted small">${cap}</div>
-              <div class="text-muted small">${exp}</div>
+    grid.innerHTML = filtered.slice(0,24).map(d=>{
+      const cap = [d.card,d.issuer].filter(Boolean).join(' • ');
+      const exp = d.expires ? `Ends ${d.expires}` : '';
+      let tag = 'Other';
+      if(d.type==='welcome') tag='Welcome';
+      else if(d.type==='perk') tag='Perk';
+      else if(d.type==='category'){
+        if(d.title.includes('Travel')) tag='Travel';
+        else if(d.title.includes('Food')) tag='Food';
+        else tag='Misc';
+      }
+
+      return `
+        <div class="col-12 col-md-6">
+          <div class="card h-100" style="border-radius:14px;box-shadow:0 8px 24px -12px rgba(0,0,0,.15)">
+            <div class="card-body">
+              <div class="d-flex align-items-center justify-content-between mb-1">
+                <span class="badge bg-light border text-dark">${tag}</span>
+              </div>
+              <div class="fw-bold" style="font-size:1.05rem">${d.title || ''}</div>
+              ${d.subtitle ? `<div class="text-muted small mt-1">${d.subtitle}</div>` : ''}
+              <div class="d-flex align-items-center justify-content-between mt-3">
+                <div class="text-muted small">${cap}</div>
+                <div class="text-muted small">${exp}</div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>`;
-  }).join('');
+        </div>`;
+    }).join('');
+  }
+
+  // 4. Initial render
+  renderDeals();
+
+  // 5. Attach event listeners to checkboxes
+  document.querySelectorAll('.deal-filter').forEach(cb=>{
+    cb.addEventListener('change', renderDeals);
+  });
 })();
 </script>
 {% endblock %}
-  
