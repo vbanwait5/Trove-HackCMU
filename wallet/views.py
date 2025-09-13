@@ -20,25 +20,39 @@ def cards_view(request):
     cards = Card.objects.filter(user=request.user)
     return render(request, "wallet/cards.html", {"cards": cards})
 
-
-
-@login_required
-def goals_view(request):
-    goals = Goal.objects.filter(user=request.user)
-    return render(request, "wallet/goals.html", {"goals": goals})
-
-
 @login_required
 def subscriptions_view(request):
     subs = Subscription.objects.filter(user=request.user)
     return render(request, "wallet/subscriptions.html", {"subscriptions": subs})
 
-
-from django.shortcuts import render
-from django.db import connection  # uses your default DB (db.sqlite3)
+# wallet/views.py
+from django.shortcuts import render, redirect
+from django.db import connection
 
 def spending_dashboard(request):
-    # Pull the latest 100 transactions and flatten categories (if present)
+    if request.method == "POST":
+        # Delete goal if delete form submitted
+        delete_goal_id = request.POST.get("delete_goal_id")
+        if delete_goal_id:
+            with connection.cursor() as cur:
+                cur.execute(f"DELETE FROM wallet_goal WHERE id = {delete_goal_id} AND user_id = 1;")
+            return redirect("goals")
+
+        # Otherwise: add new goal
+        category = request.POST.get("category")
+        limit_amount = request.POST.get("limit_amount")
+        period_start = request.POST.get("period_start")
+        period_end = request.POST.get("period_end")
+
+        with connection.cursor() as cur:
+            cur.execute(f"""
+                INSERT INTO wallet_goal (category, limit_amount, current_spend, period_start, period_end, user_id)
+                VALUES ('{category}', {limit_amount}, 0, '{period_start}', '{period_end}', 1);
+            """)
+
+        return redirect("goals")
+
+    # --- Transactions (unchanged, the one that worked) ---
     with connection.cursor() as cur:
         cur.execute("""
             SELECT
@@ -60,15 +74,51 @@ def spending_dashboard(request):
         rows = cur.fetchall()
         transactions = [dict(zip(cols, r)) for r in rows]
 
-    # If you already have goals in your DB, load them here; otherwise just pass an empty list.
-    goals = []
+    # --- Goals ---
+    with connection.cursor() as cur:
+        cur.execute("""
+            SELECT id, category, limit_amount, period_start, period_end
+            FROM wallet_goal
+            WHERE user_id = 1
+            ORDER BY period_start DESC;
+        """)
+        cols = [c[0] for c in cur.description]
+        raw_goals = [dict(zip(cols, r)) for r in cur.fetchall()]
 
-    # Pick a budget number to drive the progress bar
-    budget = 1200
+    goals = []
+    for g in raw_goals:
+        with connection.cursor() as cur:
+            cur.execute(f"""
+                SELECT COALESCE(SUM(amount), 0)
+                FROM transactions t
+                JOIN transaction_categories c
+                  ON c.transaction_id = t.transaction_id
+                WHERE c.category LIKE '%{g["category"]}%'
+                  AND t.date BETWEEN '{g["period_start"]}' AND '{g["period_end"]}';
+            """)
+            current_spend = float(cur.fetchone()[0] or 0)
+
+        pct = (current_spend / float(g["limit_amount"])) * 100 if g["limit_amount"] else 0
+        if pct >= 75:
+            color = "#ef4444"  # red
+        elif pct >= 50:
+            color = "#f59e0b"  # orange
+        else:
+            color = "#22c55e"  # green
+
+        goals.append({
+            **g,
+            "current_spend": current_spend,
+            "pct": pct,
+            "color": color,
+        })
+
+    # --- Budget ---
+    budget = sum(float(g["limit_amount"]) for g in goals) if goals else 1200
 
     return render(
         request,
-        "wallet/goals.html",  # your template from the message
+        "wallet/goals.html",
         {"transactions": transactions, "goals": goals, "budget": budget},
     )
 
@@ -165,7 +215,7 @@ def perks_dashboard(request):
         "cards": list(cards.values()),
         "issuers": issuers,
     })
-
+    
 @login_required
 def cards_dashboard(request):
     with connection.cursor() as cur:
@@ -250,4 +300,10 @@ def cards_dashboard(request):
                     "end_date": end_date,
                 }
 
-    return render(request, "wallet/cards.html", {"cards": list(cards.values())})
+    # Calculate total annual fee
+    total_fee = sum(card["annual_fee"] for card in cards.values())
+
+    return render(request, "wallet/cards.html", {
+        "cards": list(cards.values()),
+        "total_fee": total_fee
+    })
