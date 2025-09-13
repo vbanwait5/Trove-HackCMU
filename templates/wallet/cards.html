@@ -1,10 +1,25 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
+<style>
+  .card-standard {
+    height: 370px;
+    min-height: 370px;
+    max-height: 370px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+</style>
 <div class="container mt-4">
   <div class="row">
     <div class="col-12">
       <h2 class="mb-4">My Cards</h2>
+
+      <!-- Total Annual Fee -->
+      <div class="alert alert-info mb-4">
+        <strong>Total Annual Fee:</strong> ${{ total_fee|floatformat:2 }}
+      </div>
 
       <div class="list-group mb-4">
         {% if cards %}
@@ -12,8 +27,7 @@
             <a href="#{{ c.card_name|slugify }}" class="list-group-item list-group-item-action">
               <strong>{{ c.card_name }}</strong>
               <span class="text-muted">({{ c.issuer|default:"—" }})</span>
-              <span class="ms-2 badge bg-light border text-dark">Base {{ c.base_reward_rate|floatformat:2 }}x</span>
-              {% if c.annual_fee %}<span class="ms-2 badge bg-light border text-dark">Fee ${{ c.annual_fee|floatformat:0 }}</span>{% endif %}
+              <span class="ms-2 badge bg-light border text-dark"></span>
             </a>
           {% endfor %}
         {% else %}
@@ -23,11 +37,11 @@
     </div>
   </div>
 
-  <!-- Details grid -->
+  <!-- Details grid (sorted by annual fee, highest last) -->
   <div class="row">
-    {% for c in cards %}
+    {% for c in cards|dictsort:"annual_fee" %}
     <div class="col-md-6 mb-4">
-      <div class="card" id="{{ c.card_name|slugify }}" style="border-radius:14px;box-shadow:0 8px 24px -12px rgba(0,0,0,.15)">
+      <div class="card card-standard" id="{{ c.card_name|slugify }}" style="border-radius:14px;box-shadow:0 8px 24px -12px rgba(0,0,0,.15)">
         <div class="card-body">
           <div class="d-flex align-items-start justify-content-between">
             <div>
@@ -105,5 +119,55 @@
     </div>
     {% endfor %}
   </div>
+
+  <!-- Bar Chart at the end -->
+  <div class="row mt-5">
+    <div class="col-12">
+      <canvas id="feeBarChart" height="100"></canvas>
+    </div>
+  </div>
 </div>
+
+<!-- Chart.js Bar Chart Script -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // Prepare data for the bar chart (sorted by annual fee)
+  const cardData = [
+    {% for c in cards|dictsort:"annual_fee" %}
+      {name: "{{ c.card_name|escapejs }}", fee: {{ c.annual_fee|floatformat:2 }}},
+    {% endfor %}
+  ];
+  const cardNames = cardData.map(c => c.name);
+  const cardFees = cardData.map(c => c.fee);
+
+  const ctx = document.getElementById('feeBarChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: cardNames,
+      datasets: [{
+        label: 'Annual Fee ($)',
+        data: cardFees,
+        backgroundColor: 'rgba(54, 162, 235, 0.6)',
+        borderColor: 'rgba(54, 162, 235, 1)',
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      scales: {
+        x: {
+          beginAtZero: true
+        }
+      },
+      plugins: {
+        legend: { display: false },
+        title: {
+          display: true,
+          text: 'Annual Fee by Card'
+        }
+      }
+    }
+  });
+</script>
 {% endblock %}

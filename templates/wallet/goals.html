@@ -44,10 +44,19 @@
       <div id="thresholdBadge" class="text-xs px-2.5 py-1 rounded-full border hidden"></div>
     </div>
 
+    <!-- Progress bar container -->
     <div class="relative w-full h-5 rounded-full overflow-hidden bg-slate-100 border border-slate-200" aria-label="Budget progress">
-      <div id="progressFill" class="h-full" style="width:0%"></div>
-      <div class="absolute inset-0 flex items-center justify-center text-xs font-medium" id="progressLabel">0%</div>
-    </div>
+      <!-- Fill bar (force height + color visible) -->
+      <div id="progressFill" 
+           class="absolute left-0 top-0 h-5 z-0" 
+           style="width:0%; background:#22c55e;">
+      </div>
+      <!-- Label (always on top) -->
+      <div class="absolute inset-0 flex items-center justify-center text-xs font-medium z-10" id="progressLabel">
+        0%
+      </div>
+    </div>    
+
     <div class="flex justify-between text-xs opacity-70 mt-2">
       <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
     </div>
@@ -64,7 +73,8 @@
               style="background:#ffffff">+ Add Goal</button>
     </div>
 
-    <form id="addGoalForm" method="post" action="" class="hidden mb-4 p-4 rounded-xl border border-slate-200" style="background:#ffffff">
+    <form id="addGoalForm" method="post" action="{% url 'goals' %}"
+      class="hidden mb-4 p-4 rounded-xl border border-slate-200" style="background:#ffffff">
       {% csrf_token %}
       <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; align-items:end;">
         <div>
@@ -89,33 +99,42 @@
         <button id="cancelAddGoal" type="button" class="px-3 py-2 rounded-xl border border-slate-200">Cancel</button>
       </div>
     </form>
-
     <ul class="space-y-3">
       {% for g in goals %}
-        <li class="p-3 rounded-xl border border-slate-200 flex items-center justify-between">
-          <div>
-            <div class="font-medium">{{ g.category }}</div>
-            <div class="text-sm opacity-70">
-              ${{ g.current_spend }} / ${{ g.limit_amount }}
-              <span class="opacity-60">({{ g.period_start }} → {{ g.period_end }})</span>
-            </div>
+      <li class="p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+        <div>
+          <div class="font-medium">{{ g.category }}</div>
+          <div class="text-sm opacity-70">
+            ${{ g.current_spend }} / ${{ g.limit_amount }}
+            <span class="opacity-60">({{ g.period_start }} → {{ g.period_end }})</span>
           </div>
-
+        </div>
+      
+        <div class="flex items-center gap-2">
+          <!-- Progress bar -->
           <div class="w-48">
             <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-              {% if g.limit_amount %}
-                <div class="h-2"
-                     style="width: {% widthratio g.current_spend g.limit_amount 100 %}%;
-                            background: linear-gradient(90deg, #22c55e, #f97316, #ef4444);"></div>
-              {% else %}
-                <div class="h-2" style="width: 0%; background: linear-gradient(90deg, #22c55e, #f97316, #ef4444);"></div>
-              {% endif %}
+              <div class="h-2"
+              style="width: {{ g.pct }}%;
+                      background-color: {{ g.color }};">
+          </div>
+          <div class="text-right text-xs mt-1 opacity-70">
+            {{ g.pct|floatformat:0 }}%
+          </div>
             </div>
             <div class="text-right text-xs mt-1 opacity-70">
-              {% if g.limit_amount %}{% widthratio g.current_spend g.limit_amount 100 %}{% else %}0{% endif %}%
+              {% widthratio g.current_spend g.limit_amount 100 %}%
             </div>
           </div>
-        </li>
+      
+          <!-- Delete button -->
+          <form method="post" action="" style="margin:0;">
+            {% csrf_token %}
+            <input type="hidden" name="delete_goal_id" value="{{ g.id }}">
+            <button type="submit" class="text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>
+          </form>
+        </div>
+      </li>      
       {% empty %}
         <li class="p-3 rounded-xl border border-slate-200">No goals yet.</li>
       {% endfor %}
@@ -191,11 +210,7 @@
         merchant: "{{ t.merchant|escapejs }}",
         category: "{{ t.category|escapejs }}",
         date: "{{ t.date|escapejs }}",
-        amount: (function(v){
-          const s = String(v).replace(/[^0-9.-]/g,'');
-          const n = parseFloat(s);
-          return Number.isFinite(n) ? n : 0;
-        })("{{ t.amount|default_if_none:0 }}")
+        amount: parseFloat("{{ t.amount|default_if_none:0 }}") || 0
       }{% if not forloop.last %},{% endif %}
     {% endfor %}
   ];
@@ -239,7 +254,7 @@
 
   // Compute totals with a robust fallback to goals if tx sum is 0
   function getTotals(rows){
-    const totalTx = rows.reduce((s,t)=> s + (Number.isFinite(t.amount)? t.amount : Number(t.amount)||0), 0);
+    const totalTx = rows.reduce((s,t)=> s + (parseFloat(t.amount) || 0), 0);
     const totalGoalsSpend = serverGoals.reduce((s,g)=> s + (g.current_spend||0), 0);
     const sumGoalLimits = serverGoals.reduce((s,g)=> s + (g.limit||0), 0);
 
