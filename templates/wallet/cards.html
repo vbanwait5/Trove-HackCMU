@@ -4,9 +4,27 @@
 <h2>My Cards</h2>
 <ul>
   {% for card in cards %}
-    <li>{{ card.name }} ({{ card.issuer }}) - Base rate: {{ card.base_reward_rate }}x</li>
+    <li>
+      <a href="#{{ card.name|slugify }}">{{ card.name }} ({{ card.issuer }}) - Base rate: {{ card.base_reward_rate }}x</a>
+    </li>
   {% empty %}
     <li>No cards yet.</li>
   {% endfor %}
+  <li>
+    <a href="#chase-freedom">Chase Freedom</a>
+  </li>
 </ul>
-{% endblock %}
+
+<div class="card mt-4" id="chase-freedom">
+  <div class="card-body">
+    <h4 class="card-title">Chase Freedom</h4>
+    <p>
+      <strong>APR:</strong> 19.99%<br>
+      <strong>Annual Fee:</strong> $0
+    </p>
+    <p>
+      The Chase Freedom card offers 1.5% cash back on all purchases, rotating 5% categories each quarter, and has no annual fee.
+    </p>
+  </div>
+</div>
+{% endblock %}  
