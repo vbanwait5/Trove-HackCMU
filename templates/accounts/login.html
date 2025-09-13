@@ -1,7 +1,9 @@
 {% extends "layouts/base-auth.html" %}
 {% load static %}
 
-{% block title %}Login{% endblock title %}
+<script>
+  document.title = 'Login | Trove';
+</script>
 
 {% block content %}
 
@@ -20,12 +22,18 @@
               {% csrf_token %}
 
               <div class="text-center">
-                <a href="{% url "index" %}">
-                  <div>
-                    <img src="{% static "assets/images/logo-dark.svg" %}" alt="img">
-                  </div>
-                </a>
-              </div>
+              <a href="{% url "index" %}">
+                <div>
+                  <img
+                    src="{% static "img/trove_logo.png" %}"
+                    alt="img"
+                    style="display:block;margin:0 auto;max-width:200px;width:60%;min-width:120px;height:auto;object-fit:contain;"
+                    loading="lazy"
+                  >
+                </div>
+              </a>
+            </div>
+
               <h4 class="text-center f-w-500 mt-4 mb-3">Login</h4>
               <p class="text-center mb-3">
                 <span>Test Account: <strong>test / Pass12__</strong></span>
