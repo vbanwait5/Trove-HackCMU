@@ -1,9 +1,9 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
-<div class="mx-auto max-w-6xl p-6">
+<div class="container-md px-4 my-5">
   <!-- Header -->
-  <div class="d-flex align-items-center justify-content-between mb-3">
+  <div class="d-flex align-items-center justify-content-between mb-4">
     <div>
       <h1 class="h3 fw-bold mb-1">Deals & Card Perks</h1>
       <div class="text-muted small">
@@ -16,16 +16,12 @@
     </div>
   </div>
 
-  <!-- Spotlight: Deals First -->
-  <div class="card mb-4" style="border-radius:14px;box-shadow:0 8px 24px -12px rgba(0,0,0,.15)">
-    <div class="card-body">
-      <div class="d-flex align-items-center justify-content-between mb-2">
-        <h2 class="h5 mb-0">Deals Spotlight</h2>
-        <div class="small text-muted" id="dealCount">0 deals</div>
-      </div>
-      <div id="dealsGrid" class="row g-3"></div>
-    </div>
+  <!-- Deals Grid -->
+  <div class="d-flex align-items-center justify-content-between mb-3">
+    <h2 class="h5 mb-0">Deals Spotlight</h2>
+    <div class="small text-muted" id="dealCount">0 deals</div>
   </div>
+  <div id="dealsGrid" class="row g-4"></div>
 </div>
 
 {# Build the deals list from the cards context #}
@@ -92,7 +88,6 @@
   }
   const deals = Array.from(uniq.values());
 
-  // Sort: welcome -> perk -> category; prefer those with an expiry date
   const weight = { welcome: 0, perk: 1, category: 2 };
   deals.sort((a,b)=>{
     const wa = weight[a.type] ?? 9, wb = weight[b.type] ?? 9;
