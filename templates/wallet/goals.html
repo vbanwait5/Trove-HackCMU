@@ -1,0 +1,12 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<h2>Spending Goals</h2>
+<ul>
+  {% for g in goals %}
+    <li>{{ g.category }}: ${{ g.current_spend }} / ${{ g.limit_amount }} ({{ g.period_start }} → {{ g.period_end }})</li>
+  {% empty %}
+    <li>No goals yet.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

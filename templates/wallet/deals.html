@@ -1,0 +1,12 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<h2>Deals</h2>
+<ul>
+  {% for d in deals %}
+    <li>{{ d.card.name }} → {{ d.description }} {% if d.expiry_date %}(Expires {{ d.expiry_date }}){% endif %}</li>
+  {% empty %}
+    <li>No deals found.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

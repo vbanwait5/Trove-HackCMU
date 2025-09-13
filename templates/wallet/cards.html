@@ -1,0 +1,12 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<h2>My Cards</h2>
+<ul>
+  {% for card in cards %}
+    <li>{{ card.name }} ({{ card.issuer }}) - Base rate: {{ card.base_reward_rate }}x</li>
+  {% empty %}
+    <li>No cards yet.</li>
+  {% endfor %}
+</ul>
+{% endblock %}
