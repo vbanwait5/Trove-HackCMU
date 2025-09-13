@@ -1,0 +1,107 @@
+{
+  "accounts": [
+    {
+      "account_id": "acc_1",
+      "mask": "1234",
+      "name": "Amex Gold",
+      "official_name": "American Express Gold Card",
+      "subtype": "credit card",
+      "type": "credit"
+    },
+    {
+      "account_id": "acc_2",
+      "mask": "5678",
+      "name": "Chase Freedom Flex",
+      "official_name": "Chase Freedom Flex Credit Card",
+      "subtype": "credit card",
+      "type": "credit"
+    },
+    {
+      "account_id": "acc_3",
+      "mask": "9012",
+      "name": "Citi Strata Premier",
+      "official_name": "Citi Strata Premier Card",
+      "subtype": "credit card",
+      "type": "credit"
+    }
+  ],
+  "transactions": [
+    {
+      "transaction_id": "txn_1001",
+      "account_id": "acc_1",
+      "amount": 42.50,
+      "date": "2025-09-05",
+      "name": "Starbucks",
+      "merchant_name": "Starbucks",
+      "category": ["Food and Drink", "Coffee Shop"],
+      "payment_channel": "in store"
+    },
+    {
+      "transaction_id": "txn_1002",
+      "account_id": "acc_1",
+      "amount": 85.20,
+      "date": "2025-09-03",
+      "name": "Uber Eats",
+      "merchant_name": "Uber Eats",
+      "category": ["Food and Drink", "Delivery"],
+      "payment_channel": "online"
+    },
+    {
+      "transaction_id": "txn_2001",
+      "account_id": "acc_2",
+      "amount": 59.99,
+      "date": "2025-09-04",
+      "name": "Spotify Subscription",
+      "merchant_name": "Spotify",
+      "category": ["Entertainment", "Music"],
+      "payment_channel": "online"
+    },
+    {
+      "transaction_id": "txn_2002",
+      "account_id": "acc_2",
+      "amount": 120.00,
+      "date": "2025-09-06",
+      "name": "Delta Airlines",
+      "merchant_name": "Delta",
+      "category": ["Travel", "Airlines"],
+      "payment_channel": "online"
+    },
+    {
+      "transaction_id": "txn_3001",
+      "account_id": "acc_3",
+      "amount": 15.75,
+      "date": "2025-09-01",
+      "name": "Chipotle",
+      "merchant_name": "Chipotle",
+      "category": ["Food and Drink", "Fast Food"],
+      "payment_channel": "in store"
+    },
+    {
+      "transaction_id": "txn_3002",
+      "account_id": "acc_3",
+      "amount": 250.00,
+      "date": "2025-09-02",
+      "name": "Marriott Hotel",
+      "merchant_name": "Marriott",
+      "category": ["Travel", "Lodging"],
+      "payment_channel": "in store"
+    },
+    {
+      "transaction_id": "txn_3003",
+      "account_id": "acc_3",
+      "amount": 65.30,
+      "date": "2025-09-07",
+      "name": "Whole Foods",
+      "merchant_name": "Whole Foods Market",
+      "category": ["Shops", "Groceries"],
+      "payment_channel": "in store"
+    }
+  ],
+  "item": {
+    "item_id": "dummy_item_1",
+    "institution_id": "ins_123",
+    "webhook": null
+  },
+  "request_id": "dummy_request_001",
+  "total_transactions": 7
+}
