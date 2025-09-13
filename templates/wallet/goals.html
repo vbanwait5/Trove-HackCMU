@@ -64,7 +64,8 @@
               style="background:#ffffff">+ Add Goal</button>
     </div>
 
-    <form id="addGoalForm" method="post" action="" class="hidden mb-4 p-4 rounded-xl border border-slate-200" style="background:#ffffff">
+    <form id="addGoalForm" method="post" action="{% url 'goals' %}"
+      class="hidden mb-4 p-4 rounded-xl border border-slate-200" style="background:#ffffff">
       {% csrf_token %}
       <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; align-items:end;">
         <div>
@@ -89,7 +90,6 @@
         <button id="cancelAddGoal" type="button" class="px-3 py-2 rounded-xl border border-slate-200">Cancel</button>
       </div>
     </form>
-
     <ul class="space-y-3">
       {% for g in goals %}
         <li class="p-3 rounded-xl border border-slate-200 flex items-center justify-between">

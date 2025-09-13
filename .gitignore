@@ -11,7 +11,6 @@ env__
 /staticfiles/
 
 #src
-*.sqlite
-
+*.sqlite3
 .env
 yarn.lock

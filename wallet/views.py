@@ -33,12 +33,28 @@ def subscriptions_view(request):
     subs = Subscription.objects.filter(user=request.user)
     return render(request, "wallet/subscriptions.html", {"subscriptions": subs})
 
-
-from django.shortcuts import render
-from django.db import connection  # uses your default DB (db.sqlite3)
+# wallet/views.py
+from django.shortcuts import render, redirect
+from django.db import connection
 
 def spending_dashboard(request):
-    # Pull the latest 100 transactions and flatten categories (if present)
+    # --- Handle Add Goal form ---
+    if request.method == "POST":
+        category = request.POST.get("category")
+        limit_amount = request.POST.get("limit_amount")
+        period_start = request.POST.get("period_start")
+        period_end = request.POST.get("period_end")
+
+        # Insert goal directly into wallet_goal
+        with connection.cursor() as cur:
+            cur.execute(f"""
+                INSERT INTO wallet_goal (category, limit_amount, current_spend, period_start, period_end, user_id)
+                VALUES ('{category}', {limit_amount}, 0, '{period_start}', '{period_end}', 1);
+            """)
+
+        return redirect("goals")
+
+    # --- Transactions (unchanged, the one that worked) ---
     with connection.cursor() as cur:
         cur.execute("""
             SELECT
@@ -60,15 +76,38 @@ def spending_dashboard(request):
         rows = cur.fetchall()
         transactions = [dict(zip(cols, r)) for r in rows]
 
-    # If you already have goals in your DB, load them here; otherwise just pass an empty list.
-    goals = []
+    # --- Goals ---
+    with connection.cursor() as cur:
+        cur.execute("""
+            SELECT id, category, limit_amount, period_start, period_end
+            FROM wallet_goal
+            WHERE user_id = 1
+            ORDER BY period_start DESC;
+        """)
+        cols = [c[0] for c in cur.description]
+        raw_goals = [dict(zip(cols, r)) for r in cur.fetchall()]
 
-    # Pick a budget number to drive the progress bar
-    budget = 1200
+    goals = []
+    for g in raw_goals:
+        with connection.cursor() as cur:
+            cur.execute(f"""
+                SELECT COALESCE(SUM(amount), 0)
+                FROM transactions t
+                JOIN transaction_categories c
+                  ON c.transaction_id = t.transaction_id
+                WHERE c.category LIKE '%{g["category"]}%'
+                  AND t.date BETWEEN '{g["period_start"]}' AND '{g["period_end"]}';
+            """)
+            current_spend = float(cur.fetchone()[0] or 0)
+
+        goals.append({**g, "current_spend": current_spend})
+
+    # --- Budget ---
+    budget = sum(float(g["limit_amount"]) for g in goals) if goals else 1200
 
     return render(
         request,
-        "wallet/goals.html",  # your template from the message
+        "wallet/goals.html",
         {"transactions": transactions, "goals": goals, "budget": budget},
     )
 
