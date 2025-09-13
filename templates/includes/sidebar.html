@@ -1,11 +1,15 @@
+{% load static %}
+<!DOCTYPE html>
 <!-- Sidebar -->
 <nav class="pcoded-navbar">
-  <div class="navbar-wrapper">
-    <div class="navbar-brand header-logo">
-      <a href="{% url 'dashboard' %}" class="b-brand">
-        <span class="b-title" style="font-size: 2rem; font-weight: bold;">Trove</span>
+  <div class="navbar-brand header-logo">
+    <a href="{% url 'dashboard' %}" class="b-brand">
+      <img src="{% static '/img/trove_logo.png' %}"
+           alt="Trove Logo"
+           style="height:36px; width:auto; display:inline-block; vertical-align:middle; margin:4px 12px;">
       </a>
     </div>
+  </div>
     <div class="navbar-content scroll-div">
       <ul class="nav pcoded-inner-navbar">
         <li class="nav-item">
