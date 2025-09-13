@@ -1,8 +1,9 @@
 [
   {
-    "card_name": "Chase Freedom / Freedom Flex",
+    "card_name": "Chase Freedom Flex",
     "issuer": "Chase",
-    "type": "rotating_bonus",
+    "annual_fee": 0,
+    "type": "rotating_bonus_categories",
     "current_period": {
       "start_date": "2025-07-01",
       "end_date": "2025-09-30"
@@ -12,7 +13,7 @@
         "category_name": "Instacart",
         "reward_rate": 5,
         "cap": 1500,
-        "note": "Activate by 2025-09-14"
+        "note": "Must activate this quarter"
       },
       {
         "category_name": "Select Live Entertainment",
@@ -34,73 +35,223 @@
       }
     ],
     "base_reward_rate": 1,
-    "other_perks": [
-      {
-        "perk_name": "Birthday Bonus Category",
-        "description": "Instacart is birthday bonus this quarter"
-      }
-    ]
+    "welcome_bonus": {
+      "points_or_cash": 200,
+      "spend_requirement": 500,
+      "time_frame_months": 3
+    }
   },
   {
-    "card_name": "Amex Platinum",
-    "issuer": "American Express",
-    "type": "recurring_credit",
+    "card_name": "Chase Sapphire Reserve",
+    "issuer": "Chase",
+    "annual_fee": 795,
+    "type": "travel_perks",
     "perks": [
       {
-        "perk_name": "Digital Entertainment Credit",
-        "description": "Up to $20/month for services like Disney+, Hulu, etc.",
-        "frequency": "monthly"
-      },
-      {
-        "perk_name": "Uber Cash",
-        "description": "$15/month for Uber / Uber Eats",
-        "frequency": "monthly"
-      },
-      {
-        "perk_name": "Walmart+ Credit",
-        "description": "Up to $12.95/month for Walmart+ membership fee",
-        "frequency": "monthly"
-      },
-      {
-        "perk_name": "CLEAR Plus Credit",
-        "description": "Up to $199/year for CLEAR Plus membership",
+        "perk_name": "Annual Travel Credit",
+        "description": "$300 travel credit per year",
         "frequency": "yearly"
       },
       {
-        "perk_name": "Saks Fifth Avenue Credit",
-        "description": "$50 twice per year (total $100/year) for Saks purchases",
-        "frequency": "semi-annual"
-      }
-    ]
-  },
-  {
-    "card_name": "Chase Freedom / Freedom Flex",
-    "issuer": "Chase",
-    "type": "rotating_bonus",
-    "current_period": {
-      "start_date": "2025-04-01",
-      "end_date": "2025-06-30"
-    },
-    "bonus_categories": [
-      {
-        "category_name": "Amazon",
-        "reward_rate": 5,
-        "cap": 1500,
-        "note": "Activate by 2025-06-14"
+        "perk_name": "Lounge Access",
+        "description": "Priority Pass lounge access",
+        "frequency": "ongoing"
       },
       {
-        "category_name": "Select Streaming Services",
-        "reward_rate": 5,
-        "cap": 1500,
+        "perk_name": "Enhanced Earning",
+        "description": "8× points on Chase Travel purchases, 3× points on Dining, 1× on others",
+        "frequency": "ongoing"
+      }
+    ],
+    "welcome_bonus": {
+      "points": 125000,
+      "spend_requirement": 6000,
+      "time_frame_months": 3
+    }
+  },
+  {
+    "card_name": "American Express Gold",
+    "issuer": "American Express",
+    "annual_fee": 250,
+    "type": "enhanced_rewards",
+    "bonus_categories": [
+      {
+        "category_name": "Restaurants (worldwide)",
+        "reward_rate": 4,
+        "cap": null,
         "note": ""
       },
       {
-        "category_name": "Internet, Cable, Phone Services",
-        "reward_rate": 5,
+        "category_name": "U.S. Supermarkets (up to $25,000/yr)",
+        "reward_rate": 4,
+        "cap": 25000,
+        "note": ""
+      },
+      {
+        "category_name": "Flights booked with airlines or on AmexTravel.com",
+        "reward_rate": 3,
         "cap": null,
-        "note": "June only"
+        "note": ""
       }
     ],
-    "base_reward_rate": 1
+    "base_reward_rate": 1,
+    "welcome_bonus": {
+      "points": 80000,
+      "spend_requirement": 6000,
+      "time_frame_months": 6
+    }
+  },
+  {
+    "card_name": "Citi Strata Premier",
+    "issuer": "Citi",
+    "annual_fee": 95,
+    "type": "travel_focused",
+    "bonus_categories": [
+      {
+        "category_name": "Hotels, car rentals, attractions via CitiTravel",
+        "reward_rate": 10,
+        "cap": null,
+        "note": ""
+      },
+      {
+        "category_name": "Flights, restaurants, supermarkets, gas, EV charging",
+        "reward_rate": 3,
+        "cap": null,
+        "note": ""
+      }
+    ],
+    "welcome_bonus": {
+      "points": 60000,
+      "spend_requirement": 4000,
+      "time_frame_months": 3
+    }
+  },
+  {
+    "card_name": "Wells Fargo Active Cash",
+    "issuer": "Wells Fargo",
+    "annual_fee": 0,
+    "type": "flat_rate_cash_back",
+    "base_reward_rate": 2,
+    "perks": [],
+    "welcome_bonus": {
+      "cash_back": 200,
+      "spend_requirement": 500,
+      "time_frame_months": 3
+    }
+  },
+  {
+    "card_name": "Bank of America Premium Rewards",
+    "issuer": "Bank of America",
+    "annual_fee": 95,
+    "type": "travel_rewards",
+    "bonus_categories": [
+      {
+        "category_name": "Travel",
+        "reward_rate": 2,
+        "cap": null,
+        "note": ""
+      },
+      {
+        "category_name": "Dining",
+        "reward_rate": 2,
+        "cap": null,
+        "note": ""
+      }
+    ],
+    "base_reward_rate": 1,
+    "welcome_bonus": {
+      "points": 25000,
+      "spend_requirement": 2000,
+      "time_frame_months": 3
+    }
+  },
+  {
+    "card_name": "Discover it Cash Back",
+    "issuer": "Discover",
+    "annual_fee": 0,
+    "type": "rotating_bonus_categories",
+    "current_period": {
+      "start_date": "2025-07-01",
+      "end_date": "2025-09-30"
+    },
+    "bonus_categories": [
+      {
+        "category_name": "Grocery & Gas Stations",
+        "reward_rate": 5,
+        "cap": 1500,
+        "note": "Activate this quarter"
+      },
+      {
+        "category_name": "Home Improvement & Furniture Stores",
+        "reward_rate": 5,
+        "cap": 1500,
+        "note": ""
+      }
+    ],
+    "base_reward_rate": 1,
+    "welcome_bonus": {
+      "cash_back": 150,
+      "spend_requirement": 500,
+      "time_frame_months": 3
+    }
+  },
+  {
+    "card_name": "Capital One Venture Rewards Credit Card",
+    "issuer": "Capital One",
+    "annual_fee": 95,
+    "type": "travel_rewards",
+    "bonus_categories": [
+      {
+        "category_name": "Travel & Hotels booked via Capital One Travel",
+        "reward_rate": 5,
+        "cap": null,
+        "note": ""
+      }
+    ],
+    "base_reward_rate": 2,
+    "welcome_bonus": {
+      "points": 75000,
+      "spend_requirement": 4000,
+      "time_frame_months": 3
+    }
+  },
+  {
+    "card_name": "Blue Cash Preferred",
+    "issuer": "American Express",
+    "annual_fee": 95,
+    "type": "cash_back",
+    "bonus_categories": [
+      {
+        "category_name": "U.S. Supermarkets",
+        "reward_rate": 6,
+        "cap": 6000,
+        "note": ""
+      },
+      {
+        "category_name": "Select Streaming Services",
+        "reward_rate": 3,
+        "cap": null,
+        "note": ""
+      }
+    ],
+    "base_reward_rate": 1,
+    "welcome_bonus": {
+      "cash_back": 250,
+      "spend_requirement": 3000,
+      "time_frame_months": 3
+    }
+  },
+  {
+    "card_name": "Citi Double Cash Card",
+    "issuer": "Citi",
+    "annual_fee": 0,
+    "type": "flat_rate_cash_back",
+    "base_reward_rate": 2,
+    "perks": [],
+    "welcome_bonus": {
+      "cash_back": null,
+      "spend_requirement": null,
+      "time_frame_months": null
+    }
   }
 ]
