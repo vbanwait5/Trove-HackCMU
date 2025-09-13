@@ -42,17 +42,17 @@ class Transaction(models.Model):
     def __str__(self):
         return f"{self.merchant} - ${self.amount} on {self.date}"
 
-
 class Goal(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="goals")
-    category = models.CharField(max_length=100)  # e.g. Dining, Travel
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    category = models.CharField(max_length=100)
     limit_amount = models.DecimalField(max_digits=10, decimal_places=2)
-    current_spend = models.DecimalField(max_digits=10, decimal_places=2, default=0.0)
+    current_spend = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     period_start = models.DateField()
     period_end = models.DateField()
 
     def __str__(self):
-        return f"{self.user.username} - {self.category} goal"
+        return f"{self.category} ({self.limit_amount})"
+
 
 
 class Subscription(models.Model):

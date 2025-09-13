@@ -18,7 +18,25 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
     <div class="rounded-2xl shadow-md p-5 bg-white/60 backdrop-blur border border-slate-100">
       <div class="text-xs uppercase opacity-60 mb-1">Total Spent</div>
-      <div class="text-2xl font-semibold" id="totalSpent">$0</div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="rounded-2xl shadow-md p-5 bg-white/60 backdrop-blur border border-slate-100">
+          <div class="text-xs uppercase opacity-60 mb-1">Total Spent</div>
+          <div class="text-2xl font-semibold">${{ total_spent|floatformat:2 }}</div>
+        </div>
+        <div class="rounded-2xl shadow-md p-5 bg-white/60 backdrop-blur border border-slate-100">
+          <div class="text-xs uppercase opacity-60 mb-1">Remaining</div>
+          <div class="text-2xl font-semibold">${{ remaining|floatformat:2 }}</div>
+        </div>
+        <div class="rounded-2xl shadow-md p-5 bg-white/60 backdrop-blur border border-slate-100">
+          <div class="text-xs uppercase opacity-60 mb-1">Transactions</div>
+          <div class="text-2xl font-semibold">{{ tx_count }}</div>
+        </div>
+        <div class="rounded-2xl shadow-md p-5 bg-white/60 backdrop-blur border border-slate-100">
+          <div class="text-xs uppercase opacity-60 mb-1">Avg. / Tx</div>
+          <div class="text-2xl font-semibold">${{ avg_per_tx|floatformat:2 }}</div>
+        </div>
+      </div>
+      
     </div>
     <div class="rounded-2xl shadow-md p-5 bg-white/60 backdrop-blur border border-slate-100">
       <div class="text-xs uppercase opacity-60 mb-1">Remaining</div>
@@ -64,8 +82,9 @@
               style="background:#ffffff">+ Add Goal</button>
     </div>
 
-    <form id="addGoalForm" method="post" action="" class="hidden mb-4 p-4 rounded-xl border border-slate-200" style="background:#ffffff">
-      {% csrf_token %}
+    <form id="addGoalForm" method="post" action="{% url 'goals' %}" 
+      class="hidden mb-4 p-4 rounded-xl border border-slate-200" style="background:#ffffff">
+    {% csrf_token %}
       <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; align-items:end;">
         <div>
           <label class="text-xs opacity-70">Category</label>
@@ -122,6 +141,31 @@
     </ul>
   </div>
 
+  <div class="rounded-2xl shadow-md p-6 bg-white/70 backdrop-blur border border-slate-100 mb-8">
+    <h2 class="text-xl font-semibold mb-4">Spending Breakdown</h2>
+    <div id="spending-pie"></div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+  <script>
+    var options = {
+      chart: {
+        type: 'pie',
+        height: 350
+      },
+      labels: {{ categories|safe }},
+      series: {{ totals|safe }},
+      colors: ['#FF9800', '#4CAF50', '#2196F3', '#9C27B0', '#F44336'],
+      legend: {
+        position: 'bottom'
+      }
+    };
+  
+    var chart = new ApexCharts(document.querySelector("#spending-pie"), options);
+    chart.render();
+  </script>
+  
+
   <!-- Transactions -->
   <div class="rounded-2xl shadow-md p-6 bg-white/70 backdrop-blur border border-slate-100">
     <div class="flex items-center justify-between mb-4">
@@ -150,7 +194,21 @@
             <th class="text-right p-3">Amount</th>
           </tr>
         </thead>
-        <tbody id="txBody" class="divide-y divide-slate-100"></tbody>
+        <tbody class="divide-y divide-slate-100">
+            {% for t in transactions %}
+            <tr>
+              <td class="p-3 font-medium">{{ t.merchant }}</td>
+              <td class="p-3 opacity-80">{{ t.category }}</td>
+              <td class="p-3 opacity-70">{{ t.date }}</td>
+              <td class="p-3 text-right font-semibold">${{ t.amount }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="p-3 text-center opacity-70">No transactions found.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          
       </table>
     </div>
   </div>
@@ -174,141 +232,4 @@
   .bg-slate-50{background:#f8fafc}.bg-slate-100{background:#f1f5f9}
   .divide-y> :not([hidden])~:not([hidden]){border-top:1px solid rgba(15,23,42,.06)}
 </style>
-
-<script>
-(function(){
-  const budget = Number("{{ budget|default:1000 }}") || 1000;
-
-  // Build from context only
-  const serverTx = [
-    {% for t in transactions %}
-      { merchant: "{{ t.merchant|escapejs }}",
-        category: "{{ t.category|escapejs }}",
-        date: "{{ t.date|escapejs }}",
-        amount: {{ t.amount|default:0 }} }{% if not forloop.last %},{% endif %}
-    {% endfor %}
-  ];
-
-  // Elements
-  const tbody = document.getElementById('txBody');
-  const totalSpentEl = document.getElementById('totalSpent');
-  const remainingEl = document.getElementById('remaining');
-  const txCountEl = document.getElementById('txCount');
-  const avgPerTxEl = document.getElementById('avgPerTx');
-  const fill = document.getElementById('progressFill');
-  const progressLabel = document.getElementById('progressLabel');
-  const badge = document.getElementById('thresholdBadge');
-  const alerts = document.getElementById('alerts');
-  const sortKeyEl = document.getElementById('sortKey');
-  const sortDirEl = document.getElementById('sortDir');
-
-  // Animate progress changes
-  fill.style.transition = 'width .6s ease, background-color .3s ease';
-
-  function fmt(n){return Number(n).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}
-
-  function computeStats(rows){
-    const total = rows.reduce((s,t)=>s + Number(t.amount||0),0);
-    const remaining = Math.max(0, budget - total);
-    const pct = Math.max(0, Math.min(100, Math.round((total / (budget||1)) * 100)));
-
-    totalSpentEl.textContent = `$${fmt(total)}`;
-    remainingEl.textContent = `$${fmt(remaining)}`;
-    txCountEl.textContent = rows.length;
-    avgPerTxEl.textContent = `$${fmt(total/Math.max(1,rows.length))}`;
-
-    fill.style.width = pct + '%';
-    progressLabel.textContent = pct + '%';
-
-    // Dynamic color: green (<50%), yellow (50–74%), red (75%+)
-    const color = pct >= 75 ? '#ef4444' : (pct >= 50 ? '#f59e0b' : '#22c55e');
-    fill.style.background = color;
-
-    // Clear prior alerts
-    alerts.innerHTML = '';
-    badge.classList.add('hidden');
-
-    function pill(text, color){
-      badge.textContent = text;
-      badge.classList.remove('hidden');
-      badge.style.borderColor = color;
-      badge.style.color = color;
-      badge.style.background = color + '11';
-    }
-    function alert(text, color){
-      const el = document.createElement('div');
-      el.className = 'p-3 rounded-xl border';
-      el.style.borderColor = color;
-      el.style.background = color + '0F';
-      el.style.color = color;
-      el.textContent = text;
-      alerts.appendChild(el);
-    }
-
-    if (pct >= 75) {
-      pill('75%+ of budget', '#ef4444');
-      alert('Warning: You\'ve used over 75% of your budget. Consider pausing discretionary spending.', '#ef4444');
-    } else if (pct >= 50) {
-      pill('50%+ of budget', '#f59e0b');
-      alert('Heads up: You\'ve crossed 50% of your budget.', '#f59e0b');
-    } else if (pct >= 25) {
-      pill('25%+ of budget', '#0ea5e9');
-      alert('Nice tracking! You\'re at 25% of budget. Keep an eye on upcoming bills.', '#0ea5e9');
-    }
-  }
-
-  function renderTable(rows){
-    if (!rows.length){
-      tbody.innerHTML = '<tr><td colspan="4" class="p-3 text-center opacity-70">No transactions found</td></tr>';
-      return;
-    }
-    tbody.innerHTML = rows.map(t => `
-      <tr>
-        <td class="p-3 font-medium">${t.merchant}</td>
-        <td class="p-3 opacity-80">${t.category || ''}</td>
-        <td class="p-3 opacity-70">${t.date}</td>
-        <td class="p-3 text-right font-semibold">$${fmt(t.amount)}</td>
-      </tr>
-    `).join('');
-  }
-
-  function sortRows(rows, key, dir){
-    const m = dir === 'asc' ? 1 : -1;
-    const arr = rows.slice();
-    arr.sort((a,b)=>{
-      let A,B;
-      if (key === 'date') { A = new Date(a.date); B = new Date(b.date); }
-      else if (key === 'amount') { A = Number(a.amount)||0; B = Number(b.amount)||0; }
-      else if (key === 'category') { A = (a.category||'').toLowerCase(); B = (b.category||'').toLowerCase(); }
-      else if (key === 'merchant') { A = (a.merchant||'').toLowerCase(); B = (b.merchant||'').toLowerCase(); }
-      else { A = 0; B = 0; }
-      if (A < B) return -1*m;
-      if (A > B) return 1*m;
-      return 0;
-    });
-    return arr;
-  }
-
-  function apply(){
-    const key = sortKeyEl.value || 'date';
-    const dir = sortDirEl.value || 'desc';
-    const sorted = sortRows(serverTx, key, dir);
-    renderTable(sorted);
-    computeStats(sorted);
-  }
-
-  // Toggle Add Goal form
-  const addBtn = document.getElementById('addGoalBtn');
-  const addForm = document.getElementById('addGoalForm');
-  const cancelBtn = document.getElementById('cancelAddGoal');
-  if (addBtn && addForm){ addBtn.addEventListener('click', ()=> addForm.classList.toggle('hidden')); }
-  if (cancelBtn && addForm){ cancelBtn.addEventListener('click', ()=> addForm.classList.add('hidden')); }
-
-  sortKeyEl.addEventListener('change', apply);
-  sortDirEl.addEventListener('change', apply);
-
-  // Initial render: default date DESC
-  apply();
-})();
-</script>
 {% endblock %}
