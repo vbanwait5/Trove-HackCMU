@@ -21,11 +21,6 @@ def cards_view(request):
     return render(request, "wallet/cards.html", {"cards": cards})
 
 
-@login_required
-def deals_view(request):
-    deals = Deal.objects.filter(card__user=request.user).order_by("expiry_date")
-    return render(request, "wallet/deals.html", {"deals": deals})
-
 
 @login_required
 def goals_view(request):
@@ -76,3 +71,110 @@ def spending_dashboard(request):
         "wallet/goals.html",  # your template from the message
         {"transactions": transactions, "goals": goals, "budget": budget},
     )
+
+
+
+# wallet/views.py
+from django.shortcuts import render
+from django.db import connection
+from django.contrib.auth.decorators import login_required
+
+@login_required
+def perks_dashboard(request):
+    # If your loader already created these tables, this is a harmless no-op.
+    with connection.cursor() as cur:
+        cur.executescript("PRAGMA foreign_keys = ON;")
+
+    # ---- Cards ----
+    cards = {}
+    with connection.cursor() as cur:
+        cur.execute("""
+          SELECT id, card_name, issuer, COALESCE(annual_fee, 0), type, COALESCE(base_reward_rate, 0)
+          FROM cards
+          ORDER BY issuer, card_name
+        """)
+        for cid, name, issuer, fee, ctype, base_rate in cur.fetchall():
+            cards[cid] = {
+                "id": cid,
+                "card_name": name or "",
+                "issuer": issuer or "",
+                "annual_fee": float(fee or 0),
+                "type": ctype or "",
+                "base_reward_rate": float(base_rate or 0),
+                "bonus_categories": [],
+                "perks": [],
+                "welcome_bonus": None,
+                "current_period": None,
+            }
+
+    if not cards:
+        return render(request, "wallet/perks.html", {"cards": [], "issuers": []})
+
+    valid_ids = set(cards.keys())
+
+    # ---- Bonus categories (no IN clause) ----
+    with connection.cursor() as cur:
+        cur.execute("""
+          SELECT card_id, idx, category_name, reward_rate, cap, note
+          FROM bonus_categories
+          ORDER BY card_id, idx
+        """)
+        for card_id, idx, cat_name, rate, cap, note in cur.fetchall():
+            if card_id in valid_ids:
+                cards[card_id]["bonus_categories"].append({
+                    "category_name": cat_name or "",
+                    "reward_rate": float(rate or 0),
+                    "cap": None if cap is None else float(cap),
+                    "note": note or "",
+                })
+
+    # ---- Perks ----
+    with connection.cursor() as cur:
+        cur.execute("""
+          SELECT card_id, idx, perk_name, description, frequency
+          FROM perks
+          ORDER BY card_id, idx
+        """)
+        for card_id, idx, perk_name, desc, freq in cur.fetchall():
+            if card_id in valid_ids:
+                cards[card_id]["perks"].append({
+                    "perk_name": perk_name or "",
+                    "description": desc or "",
+                    "frequency": freq or "",
+                })
+
+    # ---- Welcome bonuses ----
+    with connection.cursor() as cur:
+        cur.execute("""
+          SELECT card_id, points, cash_back, points_or_cash, spend_requirement, time_frame_months
+          FROM welcome_bonuses
+        """)
+        for card_id, points, cash_back, poc, spend_req, tf_months in cur.fetchall():
+            if card_id in valid_ids:
+                cards[card_id]["welcome_bonus"] = {
+                    "points": None if points is None else int(points),
+                    "cash_back": None if cash_back is None else float(cash_back),
+                    "points_or_cash": None if poc is None else float(poc),
+                    "spend_requirement": None if spend_req is None else float(spend_req),
+                    "time_frame_months": None if tf_months is None else int(tf_months),
+                }
+
+    # ---- Current period ----
+    with connection.cursor() as cur:
+        cur.execute("""
+          SELECT card_id, start_date, end_date
+          FROM card_current_period
+        """)
+        for card_id, start_date, end_date in cur.fetchall():
+            if card_id in valid_ids:
+                cards[card_id]["current_period"] = {
+                    "start_date": start_date,
+                    "end_date": end_date,
+                }
+
+    issuers = sorted({(c["issuer"] or "").strip() for c in cards.values() if c["issuer"]})
+    return render(request, "wallet/deals.html", {
+        "cards": list(cards.values()),
+        "issuers": issuers,
+    })
+
