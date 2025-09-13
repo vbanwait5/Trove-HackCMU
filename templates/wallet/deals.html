@@ -82,6 +82,7 @@
   {% endif %}
 {% endfor %}
 
+<!-- New JS: Travel/Food prioritized, correct tag labels -->
 <script>
 (function(){
   const all = (window._deals || []).filter(Boolean);
@@ -94,12 +95,21 @@
 
   // Sort: welcome -> perk -> category; prefer those with an expiry date
   const weight = { welcome: 0, perk: 1, category: 2 };
+  const priority = ['Travel', 'Food']; // prioritize Travel and Food deals
+
   deals.sort((a,b)=>{
-    const wa = weight[a.type] ?? 9, wb = weight[b.type] ?? 9;
+    const aPriority = priority.some(p => (a.title||'').includes(p)) ? 0 : 1;
+    const bPriority = priority.some(p => (b.title||'').includes(p)) ? 0 : 1;
+    if (aPriority !== bPriority) return aPriority - bPriority;
+
+    const wa = weight[a.type] ?? 9;
+    const wb = weight[b.type] ?? 9;
     if (wa !== wb) return wa - wb;
+
     const ha = (a.expires||'') ? 0 : 1;
     const hb = (b.expires||'') ? 0 : 1;
     if (ha !== hb) return ha - hb;
+
     return (b.title||'').length - (a.title||'').length;
   });
 
@@ -117,7 +127,15 @@
   grid.innerHTML = deals.slice(0, 24).map(d => {
     const cap = [d.card, d.issuer].filter(Boolean).join(' • ');
     const exp = d.expires ? `Ends ${d.expires}` : '';
-    const tag = d.type === 'welcome' ? 'Welcome' : (d.type === 'perk' ? 'Perk' : 'Category');
+
+    let tag = 'Other';
+    if(d.type === 'welcome') tag = 'Welcome';
+    else if(d.type === 'perk') tag = 'Perk';
+    else if(d.type === 'category') {
+      if(priority.some(p => (d.title||'').includes(p))) tag = priority.find(p => (d.title||'').includes(p));
+      else tag = 'Category';
+    }
+
     return `
       <div class="col-12 col-md-6">
         <div class="card h-100" style="border-radius:14px;box-shadow:0 8px 24px -12px rgba(0,0,0,.15)">
