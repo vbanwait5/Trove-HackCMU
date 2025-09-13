@@ -3,18 +3,23 @@
 {% block content %}
 <h2>My Cards</h2>
 <ul>
-  {% for card in cards %}
-    <li>
-      <a href="#{{ card.name|slugify }}">{{ card.name }} ({{ card.issuer }}) - Base rate: {{ card.base_reward_rate }}x</a>
-    </li>
-  {% empty %}
-    <li>No cards yet.</li>
-  {% endfor %}
+  {% if cards %}
+    {% for card in cards %}
+      <li>
+        <a href="#{{ card.name|slugify }}">{{ card.name }} ({{ card.issuer }}) - Base rate: {{ card.base_reward_rate }}x</a>
+      </li>
+    {% endfor %}
+  {% endif %}
   <li>
     <a href="#chase-freedom">Chase Freedom</a>
   </li>
+  <li>
+    <a href="#costco-visa">Costco Visa</a>
+  </li>
+  {% if not cards %}
+    <li>No cards yet.</li>
+  {% endif %}
 </ul>
-
 <div class="card mt-4" id="chase-freedom">
   <div class="card-body">
     <h4 class="card-title">Chase Freedom</h4>
@@ -27,4 +32,16 @@
     </p>
   </div>
 </div>
-{% endblock %}  
+<div class="card mt-4" id="costco-visa">
+  <div class="card-body">
+    <h4 class="card-title">Costco Visa</h4>
+    <p>
+      <strong>APR:</strong> 1.99%<br>
+      <strong>Annual Fee:</strong> $0
+    </p>
+    <p>
+      The Costco Visa card offers 4% cash back on eligible gas purchases (including at Costco) for the first $7,000 per year, 3% on restaurants and eligible travel, 2% on all other purchases from Costco and Costco.com, and 1% on all other purchases. There is no annual fee with your paid Costco membership.
+    </p>
+  </div>
+</div>
+{% endblock %}
