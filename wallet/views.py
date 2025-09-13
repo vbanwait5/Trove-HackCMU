@@ -1,5 +1,9 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.views.decorators.http import require_POST
+from django.db import connection
+
 from .models import Transaction, Card, Deal, Goal, Subscription
 import markdown2
 
@@ -113,6 +117,7 @@ def perks_dashboard(request):
         "issuers": issuers,
     })
     
+
 @login_required
 def add_card(request):
     if request.method == "POST":
