@@ -24,6 +24,7 @@ urlpatterns = [
     path('charts/', include('apps.charts.urls')),
     path("", include('admin_datta.urls')),
     path("admin/", admin.site.urls),
+    path("", include("wallet.urls")), 
 ]
 
 # Lazy-load on routing is needed

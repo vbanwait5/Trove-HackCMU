@@ -1,0 +1,23 @@
+{% extends "layouts/base.html" %}
+
+{% block content %}
+<h2>Dashboard</h2>
+
+<h3>Recent Transactions</h3>
+<ul>
+  {% for t in transactions %}
+    <li>{{ t.date }} - {{ t.merchant }} - ${{ t.amount }} ({{ t.category }})</li>
+  {% empty %}
+    <li>No transactions yet.</li>
+  {% endfor %}
+</ul>
+
+<h3>Your Goals</h3>
+<ul>
+  {% for g in goals %}
+    <li>{{ g.category }}: {{ g.current_spend }} / {{ g.limit_amount }}</li>
+  {% empty %}
+    <li>No goals set.</li>
+  {% endfor %}
+</ul>
+{% endblock %}

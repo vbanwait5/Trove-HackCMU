@@ -1,0 +1,27 @@
+[
+    {
+      "model": "wallet.card",
+      "pk": 1,
+      "fields": {
+        "user": 1,
+        "name": "Amex Gold",
+        "issuer": "American Express",
+        "card_type": "credit",
+        "annual_fee": "250.00",
+        "base_reward_rate": "1.00"
+      }
+    },
+    {
+      "model": "wallet.deal",
+      "pk": 1,
+      "fields": {
+        "card": 1,
+        "description": "4x points on Restaurants worldwide",
+        "category": "Dining",
+        "reward_rate": "4.00",
+        "expiry_date": null,
+        "activation_required": false
+      }
+    }
+  ]
+  
