@@ -128,11 +128,13 @@
           </div>
       
           <!-- Delete button -->
-          <form method="post" action="" style="margin:0;">
-            {% csrf_token %}
-            <input type="hidden" name="delete_goal_id" value="{{ g.id }}">
-            <button type="submit" class="text-red-500 hover:text-red-700 font-bold text-lg">&times;</button>
-          </form>
+        <form method="post" action="" style="margin:0; display:inline;">
+          {% csrf_token %}
+          <input type="hidden" name="delete_goal_id" value="{{ g.id }}">
+          <button type="submit"
+                  class="delete-goal-btn"
+                  aria-label="Delete Goal">&times;</button>
+        </form>
         </div>
       </li>      
       {% empty %}
@@ -192,6 +194,21 @@
   .space-y-3>*+*{margin-top:.75rem}.space-y-2>*+*{margin-top:.5rem}
   .bg-slate-50{background:#f8fafc}.bg-slate-100{background:#f1f5f9}
   .divide-y> :not([hidden])~:not([hidden]){border-top:1px solid rgba(15,23,42,.06)}
+  .delete-goal-btn {
+    background: none;       /* no background */
+    border: none;           /* remove border */
+    padding: 0;             /* no padding */
+    margin: 5;              /* no margin */
+    font-size: 1.25rem;     /* similar size to before */
+    font-weight: bold;
+    color: #eb5e5e;         /* red-500 */
+    cursor: pointer;
+    line-height: 1;         /* keep it tight */
+  }
+  .delete-goal-btn:hover {
+    color: #850f0f;         /* red-600 on hover */
+}
+
 </style>
 
 <script>

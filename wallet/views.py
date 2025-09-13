@@ -20,11 +20,6 @@ def cards_view(request):
     cards = Card.objects.filter(user=request.user)
     return render(request, "wallet/cards.html", {"cards": cards})
 
-@login_required
-def subscriptions_view(request):
-    subs = Subscription.objects.filter(user=request.user)
-    return render(request, "wallet/subscriptions.html", {"subscriptions": subs})
-
 # wallet/views.py
 from django.shortcuts import render, redirect
 from django.db import connection
