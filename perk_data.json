@@ -1,0 +1,106 @@
+[
+  {
+    "card_name": "Chase Freedom / Freedom Flex",
+    "issuer": "Chase",
+    "type": "rotating_bonus",
+    "current_period": {
+      "start_date": "2025-07-01",
+      "end_date": "2025-09-30"
+    },
+    "bonus_categories": [
+      {
+        "category_name": "Instacart",
+        "reward_rate": 5,
+        "cap": 1500,
+        "note": "Activate by 2025-09-14"
+      },
+      {
+        "category_name": "Select Live Entertainment",
+        "reward_rate": 5,
+        "cap": 1500,
+        "note": ""
+      },
+      {
+        "category_name": "Gas Stations",
+        "reward_rate": 5,
+        "cap": 1500,
+        "note": ""
+      },
+      {
+        "category_name": "EV Charging",
+        "reward_rate": 5,
+        "cap": 1500,
+        "note": ""
+      }
+    ],
+    "base_reward_rate": 1,
+    "other_perks": [
+      {
+        "perk_name": "Birthday Bonus Category",
+        "description": "Instacart is birthday bonus this quarter"
+      }
+    ]
+  },
+  {
+    "card_name": "Amex Platinum",
+    "issuer": "American Express",
+    "type": "recurring_credit",
+    "perks": [
+      {
+        "perk_name": "Digital Entertainment Credit",
+        "description": "Up to $20/month for services like Disney+, Hulu, etc.",
+        "frequency": "monthly"
+      },
+      {
+        "perk_name": "Uber Cash",
+        "description": "$15/month for Uber / Uber Eats",
+        "frequency": "monthly"
+      },
+      {
+        "perk_name": "Walmart+ Credit",
+        "description": "Up to $12.95/month for Walmart+ membership fee",
+        "frequency": "monthly"
+      },
+      {
+        "perk_name": "CLEAR Plus Credit",
+        "description": "Up to $199/year for CLEAR Plus membership",
+        "frequency": "yearly"
+      },
+      {
+        "perk_name": "Saks Fifth Avenue Credit",
+        "description": "$50 twice per year (total $100/year) for Saks purchases",
+        "frequency": "semi-annual"
+      }
+    ]
+  },
+  {
+    "card_name": "Chase Freedom / Freedom Flex",
+    "issuer": "Chase",
+    "type": "rotating_bonus",
+    "current_period": {
+      "start_date": "2025-04-01",
+      "end_date": "2025-06-30"
+    },
+    "bonus_categories": [
+      {
+        "category_name": "Amazon",
+        "reward_rate": 5,
+        "cap": 1500,
+        "note": "Activate by 2025-06-14"
+      },
+      {
+        "category_name": "Select Streaming Services",
+        "reward_rate": 5,
+        "cap": 1500,
+        "note": ""
+      },
+      {
+        "category_name": "Internet, Cable, Phone Services",
+        "reward_rate": 5,
+        "cap": null,
+        "note": "June only"
+      }
+    ],
+    "base_reward_rate": 1
+  }
+]
