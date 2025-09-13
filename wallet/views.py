@@ -165,7 +165,7 @@ def perks_dashboard(request):
         "cards": list(cards.values()),
         "issuers": issuers,
     })
-
+    
 @login_required
 def cards_dashboard(request):
     with connection.cursor() as cur:
@@ -250,4 +250,10 @@ def cards_dashboard(request):
                     "end_date": end_date,
                 }
 
-    return render(request, "wallet/cards.html", {"cards": list(cards.values())})
+    # Calculate total annual fee
+    total_fee = sum(card["annual_fee"] for card in cards.values())
+
+    return render(request, "wallet/cards.html", {
+        "cards": list(cards.values()),
+        "total_fee": total_fee
+    })
