@@ -1,5 +1,8 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db import IntegrityError
+
 from .models import Transaction, Card, Deal, Goal, Subscription
 
 
@@ -212,6 +215,31 @@ def perks_dashboard(request):
     })
     
 @login_required
+def add_card(request):
+    if request.method == "POST":
+        card_name = request.POST.get("card_name")
+        issuer = request.POST.get("issuer")
+
+        try:
+            Card.objects.create(
+                name=card_name,   
+                issuer=issuer,
+                annual_fee=request.POST.get("annual_fee", 0),
+                card_type=request.POST.get("type", ""),
+                base_reward_rate=request.POST.get("base_reward_rate", 1),
+                user=request.user,    
+            )
+            messages.success(request, f"✅ {card_name} added successfully!")
+            return redirect("cards_dashboard")
+
+        except IntegrityError:
+            messages.error(request, f"❌ {card_name} from {issuer} already exists.")
+            return redirect("cards_dashboard")
+
+    return render(request, "wallet/add_card.html")
+
+
+@login_required
 def cards_dashboard(request):
     with connection.cursor() as cur:
         cur.executescript("PRAGMA foreign_keys = ON;")
@@ -302,3 +330,4 @@ def cards_dashboard(request):
         "cards": list(cards.values()),
         "total_fee": total_fee
     })
+    
