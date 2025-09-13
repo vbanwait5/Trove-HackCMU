@@ -143,12 +143,12 @@
       const cap = [d.card,d.issuer].filter(Boolean).join(' • ');
       const exp = d.expires ? `Ends ${d.expires}` : '';
       let tag = 'Other';
-      if(d.type==='welcome') tag='Welcome';
+      if(d.type==='welcome') tag='New User Bonus';
       else if(d.type==='perk') tag='Perk';
       else if(d.type==='category'){
         if(d.title.includes('Travel')) tag='Travel';
         else if(d.title.includes('Food')) tag='Food';
-        else tag='Misc';
+        else tag='Food/Entertainment';
       }
 
       return `
