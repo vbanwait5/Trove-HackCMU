@@ -1,12 +1,220 @@
 {% extends "layouts/base.html" %}
 
 {% block content %}
-<h2>Spending Goals</h2>
-<ul>
-  {% for g in goals %}
-    <li>{{ g.category }}: ${{ g.current_spend }} / ${{ g.limit_amount }} ({{ g.period_start }} → {{ g.period_end }})</li>
-  {% empty %}
-    <li>No goals yet.</li>
-  {% endfor %}
-</ul>
+<div class="mx-auto max-w-6xl p-6">
+  <!-- Title -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-3xl font-bold tracking-tight">Credit Card Spending</h1>
+      <p class="text-sm opacity-70">Beautiful, responsive dashboard with budget awareness.</p>
+    </div>
+    <div class="text-right">
+      <div class="text-xs uppercase opacity-60">Budget (this period)</div>
+      <div class="text-2xl font-semibold">${{ budget|default:1000 }}</div>
+    </div>
+  </div>
+
+  <!-- Overview Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="rounded-2xl shadow-md p-5 bg-white/60 backdrop-blur border border-slate-100">
+      <div class="text-xs uppercase opacity-60 mb-1">Total Spent</div>
+      <div class="text-2xl font-semibold" id="totalSpent">$0</div>
+    </div>
+    <div class="rounded-2xl shadow-md p-5 bg-white/60 backdrop-blur border border-slate-100">
+      <div class="text-xs uppercase opacity-60 mb-1">Remaining</div>
+      <div class="text-2xl font-semibold" id="remaining">$0</div>
+    </div>
+    <div class="rounded-2xl shadow-md p-5 bg-white/60 backdrop-blur border border-slate-100">
+      <div class="text-xs uppercase opacity-60 mb-1">Transactions</div>
+      <div class="text-2xl font-semibold" id="txCount">0</div>
+    </div>
+    <div class="rounded-2xl shadow-md p-5 bg-white/60 backdrop-blur border border-slate-100">
+      <div class="text-xs uppercase opacity-60 mb-1">Avg. / Tx</div>
+      <div class="text-2xl font-semibold" id="avgPerTx">$0</div>
+    </div>
+  </div>
+
+  <!-- Budget Progress -->
+  <div class="rounded-2xl shadow-md p-6 bg-white/70 backdrop-blur border border-slate-100 mb-8">
+    <div class="flex items-end justify-between mb-3">
+      <div>
+        <h2 class="text-xl font-semibold">Budget Usage</h2>
+        <p class="text-sm opacity-70">Tracks toward your monthly limit.</p>
+      </div>
+      <div id="thresholdBadge" class="text-xs px-2.5 py-1 rounded-full border hidden"></div>
+    </div>
+
+    <div class="relative w-full h-5 rounded-full overflow-hidden bg-slate-100 border border-slate-200" aria-label="Budget progress">
+      <div id="progressFill" class="h-full" style="width:0%"></div>
+      <div class="absolute inset-0 flex items-center justify-center text-xs font-medium" id="progressLabel">0%</div>
+    </div>
+    <div class="flex justify-between text-xs opacity-70 mt-2">
+      <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+    </div>
+
+    <div id="alerts" class="mt-4 space-y-2"></div>
+  </div>
+
+  <!-- Category Goals -->
+  <div class="rounded-2xl shadow-md p-6 bg-white/70 backdrop-blur border border-slate-100 mb-8">
+    <h2 class="text-xl font-semibold mb-4">Spending Goals</h2>
+    <ul class="space-y-3">
+      {% for g in goals %}
+        <li class="p-3 rounded-xl border border-slate-200 flex items-center justify-between">
+          <div>
+            <div class="font-medium">{{ g.category }}</div>
+            <div class="text-sm opacity-70">
+              ${{ g.current_spend }} / ${{ g.limit_amount }}
+              <span class="opacity-60">({{ g.period_start }} → {{ g.period_end }})</span>
+            </div>
+          </div>
+
+          {% if g.limit_amount %}
+            {% widthratio g.current_spend g.limit_amount 100 as percent %}
+          {% else %}
+            {% with 0 as percent %}{% endwith %}
+          {% endif %}
+
+          <div class="w-48">
+            <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-2" style="width: {{ percent }}%; background: linear-gradient(90deg, #22c55e, #f97316, #ef4444);"></div>
+            </div>
+            <div class="text-right text-xs mt-1 opacity-70">{{ percent }}%</div>
+          </div>
+        </li>
+      {% empty %}
+        <li class="p-3 rounded-xl border border-slate-200">No goals yet.</li>
+      {% endfor %}
+    </ul>
+  </div>
+
+  <!-- Transactions -->
+  <div class="rounded-2xl shadow-md p-6 bg-white/70 backdrop-blur border border-slate-100">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold">Recent Transactions</h2>
+      <div class="text-sm opacity-70">Demo: auto-filled if you don't pass transactions from Django</div>
+    </div>
+    <div class="overflow-hidden rounded-xl border border-slate-200">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50">
+          <tr>
+            <th class="text-left p-3">Merchant</th>
+            <th class="text-left p-3">Category</th>
+            <th class="text-left p-3">Date</th>
+            <th class="text-right p-3">Amount</th>
+          </tr>
+        </thead>
+        <tbody id="txBody" class="divide-y divide-slate-100"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Minimal styles to keep things pretty even if Tailwind isn't loaded in base -->
+<style>
+  :root{--radius:16px;--shadow:0 10px 25px -10px rgba(2,6,23,.15)}
+  .rounded-2xl{border-radius:var(--radius)}.shadow-md{box-shadow:var(--shadow)}
+  .bg-white\/60{background:rgba(255,255,255,.6)}.bg-white\/70{background:rgba(255,255,255,.7)}
+  .border{border:1px solid rgba(15,23,42,.08)}.border-slate-100{border-color:rgba(15,23,42,.06)}.border-slate-200{border-color:rgba(15,23,42,.12)}
+  .text-3xl{font-size:1.75rem}.text-2xl{font-size:1.5rem}.text-xl{font-size:1.25rem}.font-bold{font-weight:800}.font-semibold{font-weight:700}.font-medium{font-weight:600}
+  .opacity-60{opacity:.6}.opacity-70{opacity:.7}.uppercase{text-transform:uppercase}
+  .p-6{padding:1.5rem}.p-5{padding:1.25rem}.p-3{padding:.75rem}.mb-6{margin-bottom:1.5rem}.mb-8{margin-bottom:2rem}.mt-1{margin-top:.25rem}.mt-2{margin-top:.5rem}.mt-4{margin-top:1rem}.mb-4{margin-bottom:1rem}
+  .grid{display:grid}.grid-cols-1{grid-template-columns:1fr}.sm\:grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}.lg\:grid-cols-4{grid-template-columns:repeat(4,minmax(0,1fr))}.gap-4{gap:1rem}
+  .mx-auto{margin-inline:auto}.max-w-6xl{max-width:72rem}.w-full{width:100%}.w-48{width:12rem}.h-5{height:1.25rem}.h-2{height:.5rem}
+  .flex{display:flex}.items-center{align-items:center}.items-end{align-items:flex-end}.justify-between{justify-content:space-between}.justify-center{justify-content:center}.text-right{text-align:right}
+  .rounded-full{border-radius:9999px}.overflow-hidden{overflow:hidden}.relative{position:relative}.absolute{position:absolute}.inset-0{inset:0}
+  .space-y-3>*+*{margin-top:.75rem}.space-y-2>*+*{margin-top:.5rem}
+  .bg-slate-50{background:#f8fafc}.bg-slate-100{background:#f1f5f9}
+  .divide-y> :not([hidden])~:not([hidden]){border-top:1px solid rgba(15,23,42,.06)}
+</style>
+
+<script>
+(function(){
+  // Budget from context (fallback to 1000)
+  const budget = Number("{{ budget|default:1000 }}") || 1000;
+
+  // Transactions from context (properly quoted/escaped), else demo data
+  const serverTx = [
+    {% if transactions %}
+      {% for t in transactions %}
+        { merchant: "{{ t.merchant|escapejs }}",
+          category: "{{ t.category|escapejs }}",
+          date: "{{ t.date|escapejs }}",
+          amount: {{ t.amount|default:0 }} },
+      {% endfor %}
+    {% endif %}
+  ].filter(Boolean);
+
+  const demoMerchants = ["Starbucks", "Amazon", "Uber", "Chipotle", "Spotify", "Apple Store", "Whole Foods", "Best Buy", "Nike", "Etsy"];
+  const demoCats = ["Food", "Transport", "Shopping", "Entertainment", "Groceries", "Bills"];
+
+  function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min}
+  function sample(arr){return arr[randInt(0,arr.length-1)]}
+  function fmt(n){return n.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}
+
+  let tx = serverTx.length ? serverTx : Array.from({length: randInt(7,14)}, () => ({
+    merchant: sample(demoMerchants),
+    category: sample(demoCats),
+    date: new Date(Date.now() - randInt(0,27)*86400000).toISOString().slice(0,10),
+    amount: Number((Math.random()*120+5).toFixed(2))
+  }));
+
+  // Render table
+  const tbody = document.getElementById('txBody');
+  tbody.innerHTML = tx.map(t => `
+    <tr>
+      <td class="p-3 font-medium">${t.merchant}</td>
+      <td class="p-3 opacity-80">${t.category}</td>
+      <td class="p-3 opacity-70">${t.date}</td>
+      <td class="p-3 text-right font-semibold">$${fmt(t.amount)}</td>
+    </tr>
+  `).join('');
+
+  // Stats
+  const total = tx.reduce((s,t)=>s+t.amount,0);
+  const remaining = Math.max(0, budget - total);
+  const pct = Math.min(100, Math.round((total / budget) * 100));
+  document.getElementById('totalSpent').textContent = `$${fmt(total)}`;
+  document.getElementById('remaining').textContent = `$${fmt(remaining)}`;
+  document.getElementById('txCount').textContent = tx.length;
+  document.getElementById('avgPerTx').textContent = `$${fmt(total/Math.max(1,tx.length))}`;
+
+  // Progress styling: green → orange → red
+  const fill = document.getElementById('progressFill');
+  fill.style.width = pct + '%';
+  fill.style.background = 'linear-gradient(90deg, #22c55e 0%, #f59e0b 60%, #ef4444 100%)';
+  document.getElementById('progressLabel').textContent = pct + '%';
+
+  // Threshold badges & alerts
+  const badge = document.getElementById('thresholdBadge');
+  const alerts = document.getElementById('alerts');
+  function pill(text, color){
+    badge.textContent = text;
+    badge.classList.remove('hidden');
+    badge.style.borderColor = color;
+    badge.style.color = color;
+    badge.style.background = color + '11';
+  }
+  function alert(text, color){
+    const el = document.createElement('div');
+    el.className = 'p-3 rounded-xl border';
+    el.style.borderColor = color;
+    el.style.background = color + '0F';
+    el.style.color = color;
+    el.textContent = text;
+    alerts.appendChild(el);
+  }
+
+  if (pct >= 75) {
+    pill('75%+ of budget', '#ef4444');
+    alert('Warning: You\'ve used over 75% of your budget. Consider pausing discretionary spending.', '#ef4444');
+  } else if (pct >= 50) {
+    pill('50%+ of budget', '#f97316');
+    alert('Heads up: You\'ve crossed 50% of your budget.', '#f97316');
+  } else if (pct >= 25) {
+    pill('25%+ of budget', '#0ea5e9');
+    alert('Nice tracking! You\'re at 25% of budget. Keep an eye on upcoming bills.', '#0ea5e9');
+  }
+})();
+</script>
 {% endblock %}
