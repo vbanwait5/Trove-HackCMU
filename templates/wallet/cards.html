@@ -128,6 +128,15 @@
             </ul>
           </div>
           {% endif %}
+
+          <!-- Delete Button -->
+          <form method="POST" action="{% url 'delete_card' c.id %}" class="position-absolute bottom-2 end-2">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('Delete this card?')">
+              <i class="bi bi-trash"></i>
+            </button>
+          </form>
+
         </div>
       </div>
     </div>

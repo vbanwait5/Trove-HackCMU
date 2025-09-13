@@ -1,6 +1,8 @@
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.views.decorators.http import require_POST
+from django.db import connection
 
 from .models import Transaction, Card, Deal, Goal, Subscription
 
@@ -237,6 +239,13 @@ def add_card(request):
 
     return render(request, "wallet/add_card.html")
 
+
+@login_required
+def delete_card(request, card_id):
+    if request.method == "POST":
+        # delete the card by ID
+        Card.objects.filter(id=card_id).delete()
+        return redirect('/cards/')
 
 @login_required
 def cards_dashboard(request):
