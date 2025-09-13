@@ -4,9 +4,8 @@ from django.contrib import messages
 from django.views.decorators.http import require_POST
 from django.db import connection
 
-
 from .models import Transaction, Card, Deal, Goal, Subscription
-
+import markdown2
 
 @login_required
 def dashboard(request):
@@ -24,104 +23,6 @@ def dashboard(request):
 def cards_view(request):
     cards = Card.objects.filter(user=request.user)
     return render(request, "wallet/cards.html", {"cards": cards})
-
-# wallet/views.py
-from django.shortcuts import render, redirect
-from django.db import connection
-
-def spending_dashboard(request):
-    if request.method == "POST":
-        # Delete goal if delete form submitted
-        delete_goal_id = request.POST.get("delete_goal_id")
-        if delete_goal_id:
-            with connection.cursor() as cur:
-                cur.execute(f"DELETE FROM wallet_goal WHERE id = {delete_goal_id} AND user_id = 1;")
-            return redirect("goals")
-
-        # Otherwise: add new goal
-        category = request.POST.get("category")
-        limit_amount = request.POST.get("limit_amount")
-        period_start = request.POST.get("period_start")
-        period_end = request.POST.get("period_end")
-
-        with connection.cursor() as cur:
-            cur.execute(f"""
-                INSERT INTO wallet_goal (category, limit_amount, current_spend, period_start, period_end, user_id)
-                VALUES ('{category}', {limit_amount}, 0, '{period_start}', '{period_end}', 1);
-            """)
-
-        return redirect("goals")
-
-    # --- Transactions (unchanged, the one that worked) ---
-    with connection.cursor() as cur:
-        cur.execute("""
-            SELECT
-                t.transaction_id,
-                COALESCE(t.merchant_name, t.name, 'Unknown') AS merchant,
-                COALESCE(
-                    (SELECT GROUP_CONCAT(c.category, ' / ')
-                     FROM transaction_categories c
-                     WHERE c.transaction_id = t.transaction_id),
-                    ''
-                ) AS category,
-                t.date AS date,
-                t.amount AS amount
-            FROM transactions t
-            ORDER BY date DESC
-            LIMIT 100;
-        """)
-        cols = [c[0] for c in cur.description]
-        rows = cur.fetchall()
-        transactions = [dict(zip(cols, r)) for r in rows]
-
-    # --- Goals ---
-    with connection.cursor() as cur:
-        cur.execute("""
-            SELECT id, category, limit_amount, period_start, period_end
-            FROM wallet_goal
-            WHERE user_id = 1
-            ORDER BY period_start DESC;
-        """)
-        cols = [c[0] for c in cur.description]
-        raw_goals = [dict(zip(cols, r)) for r in cur.fetchall()]
-
-    goals = []
-    for g in raw_goals:
-        with connection.cursor() as cur:
-            cur.execute(f"""
-                SELECT COALESCE(SUM(amount), 0)
-                FROM transactions t
-                JOIN transaction_categories c
-                  ON c.transaction_id = t.transaction_id
-                WHERE c.category LIKE '%{g["category"]}%'
-                  AND t.date BETWEEN '{g["period_start"]}' AND '{g["period_end"]}';
-            """)
-            current_spend = float(cur.fetchone()[0] or 0)
-
-        pct = (current_spend / float(g["limit_amount"])) * 100 if g["limit_amount"] else 0
-        if pct >= 75:
-            color = "#ef4444"  # red
-        elif pct >= 50:
-            color = "#f59e0b"  # orange
-        else:
-            color = "#22c55e"  # green
-
-        goals.append({
-            **g,
-            "current_spend": current_spend,
-            "pct": pct,
-            "color": color,
-        })
-
-    # --- Budget ---
-    budget = sum(float(g["limit_amount"]) for g in goals) if goals else 1200
-
-    return render(
-        request,
-        "wallet/goals.html",
-        {"transactions": transactions, "goals": goals, "budget": budget},
-    )
-
 
 @login_required
 def perks_dashboard(request):
@@ -342,3 +243,173 @@ def cards_dashboard(request):
         "cards": list(cards.values()),
         "total_fee": total_fee
     })
+
+
+from django.shortcuts import render, redirect
+from django.db import connection
+from django.views.decorators.csrf import csrf_exempt
+import sqlite3
+import google.generativeai as genai
+import markdown2
+from django.conf import settings
+
+# configure Gemini
+genai.configure(api_key=settings.GEMINI_API_KEY)
+gemini_model = genai.GenerativeModel("gemini-1.5-flash")
+
+
+def get_summary():
+    conn = sqlite3.connect("db.sqlite3")
+    cur = conn.cursor()
+
+    # total spend by category (using transaction_categories)
+    cur.execute("""
+        SELECT c.category, ROUND(SUM(t.amount),2) as total, COUNT(*) as tx_count
+        FROM transactions t
+        JOIN transaction_categories c
+          ON t.transaction_id = c.transaction_id
+        GROUP BY c.category
+        ORDER BY total DESC
+        LIMIT 10;
+    """)
+    category_summary = cur.fetchall()
+
+    # overall stats
+    cur.execute("SELECT ROUND(SUM(amount),2), COUNT(*) FROM transactions;")
+    overall_total, tx_count = cur.fetchone()
+
+    # goals progress (compare against categories + date ranges)
+    cur.execute("""
+        SELECT g.category, g.limit_amount, COALESCE(SUM(t.amount),0) as spent
+        FROM wallet_goal g
+        LEFT JOIN transactions t
+          ON EXISTS (
+              SELECT 1 FROM transaction_categories c
+              WHERE c.transaction_id = t.transaction_id
+              AND c.category LIKE '%' || g.category || '%'
+          )
+          AND t.date BETWEEN g.period_start AND g.period_end
+        GROUP BY g.id
+        ORDER BY g.period_start DESC;
+    """)
+    goals_summary = cur.fetchall()
+
+    conn.close()
+
+    # format summaries as plain text for Gemini
+    summary_text = "Recent spending summary:\n"
+    summary_text += f"- Total spent: ${overall_total} across {tx_count} transactions\n\n"
+
+    summary_text += "By category:\n"
+    for cat, total, count in category_summary:
+        summary_text += f"  • {cat}: ${total} ({count} tx)\n"
+
+    summary_text += "\nGoals progress:\n"
+    for cat, limit_amt, spent in goals_summary:
+        summary_text += f"  • {cat}: ${spent} / ${limit_amt}\n"
+
+    return summary_text
+
+@csrf_exempt
+def spending_dashboard(request):
+    analysis = None
+
+    # --- Handle POST ---
+    if request.method == "POST":
+        if "delete_goal_id" in request.POST:
+            delete_goal_id = request.POST.get("delete_goal_id")
+            with connection.cursor() as cur:
+                cur.execute("DELETE FROM wallet_goal WHERE id = %s AND user_id = 1;", [delete_goal_id])
+
+        elif "category" in request.POST:  # add new goal
+            category = request.POST.get("category")
+            limit_amount = request.POST.get("limit_amount")
+            period_start = request.POST.get("period_start")
+            period_end = request.POST.get("period_end")
+
+            with connection.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO wallet_goal (category, limit_amount, current_spend, period_start, period_end, user_id)
+                    VALUES (%s, %s, 0, %s, %s, 1);
+                """, [category, limit_amount, period_start, period_end])
+
+        elif "analyze_spending" in request.POST:  # AI button
+            summary_text = get_summary()
+            prompt = (
+                "You are a financial analysis assistant. "
+                "Based on this spending summary, identify trends, "
+                "check progress on goals, and propose a revised budget plan.\n\n"
+                f"{summary_text}"
+            )
+            resp = gemini_model.generate_content(prompt)
+            # convert Markdown -> HTML
+            analysis = markdown2.markdown(resp.text)
+
+    # --- Transactions ---
+    with connection.cursor() as cur:
+        cur.execute("""
+            SELECT
+                t.transaction_id,
+                COALESCE(t.merchant_name, t.name, 'Unknown') AS merchant,
+                COALESCE(
+                    (SELECT GROUP_CONCAT(c.category, ' / ')
+                     FROM transaction_categories c
+                     WHERE c.transaction_id = t.transaction_id),
+                    ''
+                ) AS category,
+                t.date AS date,
+                t.amount AS amount
+            FROM transactions t
+            ORDER BY date DESC
+            LIMIT 100;
+        """)
+        cols = [c[0] for c in cur.description]
+        rows = cur.fetchall()
+        transactions = [dict(zip(cols, r)) for r in rows]
+
+    # --- Goals ---
+    with connection.cursor() as cur:
+        cur.execute("""
+            SELECT id, category, limit_amount, period_start, period_end
+            FROM wallet_goal
+            WHERE user_id = 1
+            ORDER BY period_start DESC;
+        """)
+        cols = [c[0] for c in cur.description]
+        raw_goals = [dict(zip(cols, r)) for r in cur.fetchall()]
+
+    goals = []
+    for g in raw_goals:
+        with connection.cursor() as cur:
+            cur.execute("""
+                SELECT COALESCE(SUM(amount), 0)
+                FROM transactions t
+                JOIN transaction_categories c
+                  ON c.transaction_id = t.transaction_id
+                WHERE c.category LIKE %s
+                  AND t.date BETWEEN %s AND %s;
+            """, [f"%{g['category']}%", g["period_start"], g["period_end"]])
+            current_spend = float(cur.fetchone()[0] or 0)
+
+        pct = (current_spend / float(g["limit_amount"])) * 100 if g["limit_amount"] else 0
+        if pct >= 75:
+            color = "#ef4444"
+        elif pct >= 50:
+            color = "#f59e0b"
+        else:
+            color = "#22c55e"
+
+        goals.append({
+            **g,
+            "current_spend": current_spend,
+            "pct": pct,
+            "color": color,
+        })
+
+    budget = sum(float(g["limit_amount"]) for g in goals) if goals else 1200
+
+    return render(
+        request,
+        "wallet/goals.html",
+        {"transactions": transactions, "goals": goals, "budget": budget, "analysis": analysis},
+    )
