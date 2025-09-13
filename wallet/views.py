@@ -114,6 +114,40 @@ def perks_dashboard(request):
     })
     
 @login_required
+def add_card(request):
+    if request.method == "POST":
+        card_name = request.POST.get("card_name")
+        issuer = request.POST.get("issuer")
+        annual_fee = request.POST.get("annual_fee", 0)
+        card_type = request.POST.get("type", "")
+        base_reward_rate = request.POST.get("base_reward_rate", 1)
+
+        try:
+            with connection.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO cards (card_name, issuer, annual_fee, type, base_reward_rate)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, [card_name, issuer, annual_fee, card_type, base_reward_rate])
+
+            messages.success(request, f"✅ {card_name} added successfully!")
+            return redirect("cards_dashboard")
+
+        except Exception as e:
+            messages.error(request, f"❌ Error adding card: {e}")
+            return redirect("cards_dashboard")
+
+    # --- GET request: render the add card form ---
+    return render(request, "wallet/add_card.html")
+
+
+@login_required
+def delete_card(request, card_id):
+    if request.method == "POST":
+        with connection.cursor() as cur:
+            cur.execute("DELETE FROM cards WHERE id = %s", [card_id])
+        return redirect('/cards/')
+    
+@login_required
 def cards_dashboard(request):
     with connection.cursor() as cur:
         cur.executescript("PRAGMA foreign_keys = ON;")
