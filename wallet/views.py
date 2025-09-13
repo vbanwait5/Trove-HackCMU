@@ -33,26 +33,28 @@ def subscriptions_view(request):
     subs = Subscription.objects.filter(user=request.user)
     return render(request, "wallet/subscriptions.html", {"subscriptions": subs})
 
+# wallet/views.py
 from django.shortcuts import render, redirect
 from django.db import connection
 
 def spending_dashboard(request):
-    # --- Add Goal form ---
+    # --- Handle Add Goal form ---
     if request.method == "POST":
         category = request.POST.get("category")
         limit_amount = request.POST.get("limit_amount")
         period_start = request.POST.get("period_start")
         period_end = request.POST.get("period_end")
 
+        # Insert goal directly into wallet_goal
         with connection.cursor() as cur:
-            cur.execute("""
+            cur.execute(f"""
                 INSERT INTO wallet_goal (category, limit_amount, current_spend, period_start, period_end, user_id)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, [category, limit_amount, 0, period_start, period_end, 1])
+                VALUES ('{category}', {limit_amount}, 0, '{period_start}', '{period_end}', 1);
+            """)
 
         return redirect("goals")
 
-    # --- Transactions (EXACTLY like your old working query) ---
+    # --- Transactions (unchanged, the one that worked) ---
     with connection.cursor() as cur:
         cur.execute("""
             SELECT
@@ -74,7 +76,7 @@ def spending_dashboard(request):
         rows = cur.fetchall()
         transactions = [dict(zip(cols, r)) for r in rows]
 
-    # --- Goals (no placeholders, just pull them all) ---
+    # --- Goals ---
     with connection.cursor() as cur:
         cur.execute("""
             SELECT id, category, limit_amount, period_start, period_end
@@ -85,7 +87,6 @@ def spending_dashboard(request):
         cols = [c[0] for c in cur.description]
         raw_goals = [dict(zip(cols, r)) for r in cur.fetchall()]
 
-    # --- Compute current_spend for each goal ---
     goals = []
     for g in raw_goals:
         with connection.cursor() as cur:
