@@ -20,7 +20,7 @@
   <div class="mb-3">
     <span class="fw-semibold me-2">Filter Deals:</span>
     <div id="dealFilters" class="d-inline-block">
-      <!-- Checkboxes will be injected here -->
+      <!-- Checkboxes are here -->
     </div>
   </div>
 
@@ -97,6 +97,7 @@
     if(d.type==='category') {
       if(d.title.includes('Travel')) return 'Travel';
       if(d.title.includes('Food')) return 'Food';
+      if(d.title.includes('Entertainment')) return 'Entertainment';
       return 'Misc';
     }
     return 'Other';
@@ -148,6 +149,7 @@
       else if(d.type==='category'){
         if(d.title.includes('Travel')) tag='Travel';
         else if(d.title.includes('Food')) tag='Food';
+        else if(d.title.includes('Entertainment')) tag='Entertainment'; 
         else tag='Food/Entertainment';
       }
 
