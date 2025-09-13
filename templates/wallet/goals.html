@@ -57,7 +57,39 @@
 
   <!-- Category Goals -->
   <div class="rounded-2xl shadow-md p-6 bg-white/70 backdrop-blur border border-slate-100 mb-8">
-    <h2 class="text-xl font-semibold mb-4">Spending Goals</h2>
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold">Spending Goals</h2>
+      <button id="addGoalBtn" type="button"
+              class="px-3 py-2 rounded-xl border border-slate-200 shadow-md"
+              style="background:#ffffff">+ Add Goal</button>
+    </div>
+
+    <form id="addGoalForm" method="post" action="" class="hidden mb-4 p-4 rounded-xl border border-slate-200" style="background:#ffffff">
+      {% csrf_token %}
+      <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; align-items:end;">
+        <div>
+          <label class="text-xs opacity-70">Category</label>
+          <input name="category" type="text" required class="w-full p-2 rounded-lg border border-slate-200" placeholder="e.g., Food"/>
+        </div>
+        <div>
+          <label class="text-xs opacity-70">Limit ($)</label>
+          <input name="limit_amount" type="number" step="0.01" min="0" required class="w-full p-2 rounded-lg border border-slate-200" placeholder="400"/>
+        </div>
+        <div>
+          <label class="text-xs opacity-70">Start</label>
+          <input name="period_start" type="date" required class="w-full p-2 rounded-lg border border-slate-200"/>
+        </div>
+        <div>
+          <label class="text-xs opacity-70">End</label>
+          <input name="period_end" type="date" required class="w-full p-2 rounded-lg border border-slate-200"/>
+        </div>
+      </div>
+      <div class="mt-3 flex items-center" style="gap:.5rem">
+        <button type="submit" class="px-3 py-2 rounded-xl border border-slate-200 shadow-md" style="background:#22c55e; color:white">Save Goal</button>
+        <button id="cancelAddGoal" type="button" class="px-3 py-2 rounded-xl border border-slate-200">Cancel</button>
+      </div>
+    </form>
+
     <ul class="space-y-3">
       {% for g in goals %}
         <li class="p-3 rounded-xl border border-slate-200 flex items-center justify-between">
@@ -69,17 +101,19 @@
             </div>
           </div>
 
-          {% if g.limit_amount %}
-            {% widthratio g.current_spend g.limit_amount 100 as percent %}
-          {% else %}
-            {% with 0 as percent %}{% endwith %}
-          {% endif %}
-
           <div class="w-48">
             <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-              <div class="h-2" style="width: {{ percent }}%; background: linear-gradient(90deg, #22c55e, #f97316, #ef4444);"></div>
+              {% if g.limit_amount %}
+                <div class="h-2"
+                     style="width: {% widthratio g.current_spend g.limit_amount 100 %}%;
+                            background: linear-gradient(90deg, #22c55e, #f97316, #ef4444);"></div>
+              {% else %}
+                <div class="h-2" style="width: 0%; background: linear-gradient(90deg, #22c55e, #f97316, #ef4444);"></div>
+              {% endif %}
             </div>
-            <div class="text-right text-xs mt-1 opacity-70">{{ percent }}%</div>
+            <div class="text-right text-xs mt-1 opacity-70">
+              {% if g.limit_amount %}{% widthratio g.current_spend g.limit_amount 100 %}{% else %}0{% endif %}%
+            </div>
           </div>
         </li>
       {% empty %}
@@ -92,7 +126,19 @@
   <div class="rounded-2xl shadow-md p-6 bg-white/70 backdrop-blur border border-slate-100">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-xl font-semibold">Recent Transactions</h2>
-      <div class="text-sm opacity-70">Demo: auto-filled if you don't pass transactions from Django</div>
+      <div class="flex items-center" style="gap:.5rem">
+        <label class="text-xs opacity-70">Sort by</label>
+        <select id="sortKey" style="padding:.35rem .6rem;border:1px solid rgba(15,23,42,.12);border-radius:12px;background:#fff">
+          <option value="date" selected>Date</option>
+          <option value="amount">Amount</option>
+          <option value="category">Type</option>
+          <option value="merchant">Merchant</option>
+        </select>
+        <select id="sortDir" style="padding:.35rem .6rem;border:1px solid rgba(15,23,42,.12);border-radius:12px;background:#fff">
+          <option value="desc" selected>Desc</option>
+          <option value="asc">Asc</option>
+        </select>
+      </div>
     </div>
     <div class="overflow-hidden rounded-xl border border-slate-200">
       <table class="w-full text-sm">
@@ -110,8 +156,9 @@
   </div>
 </div>
 
-<!-- Minimal styles to keep things pretty even if Tailwind isn't loaded in base -->
+<!-- Minimal styles -->
 <style>
+  .hidden{display:none}
   :root{--radius:16px;--shadow:0 10px 25px -10px rgba(2,6,23,.15)}
   .rounded-2xl{border-radius:var(--radius)}.shadow-md{box-shadow:var(--shadow)}
   .bg-white\/60{background:rgba(255,255,255,.6)}.bg-white\/70{background:rgba(255,255,255,.7)}
@@ -130,91 +177,138 @@
 
 <script>
 (function(){
-  // Budget from context (fallback to 1000)
   const budget = Number("{{ budget|default:1000 }}") || 1000;
 
-  // Transactions from context (properly quoted/escaped), else demo data
+  // Build from context only
   const serverTx = [
-    {% if transactions %}
-      {% for t in transactions %}
-        { merchant: "{{ t.merchant|escapejs }}",
-          category: "{{ t.category|escapejs }}",
-          date: "{{ t.date|escapejs }}",
-          amount: {{ t.amount|default:0 }} },
-      {% endfor %}
-    {% endif %}
-  ].filter(Boolean);
+    {% for t in transactions %}
+      { merchant: "{{ t.merchant|escapejs }}",
+        category: "{{ t.category|escapejs }}",
+        date: "{{ t.date|escapejs }}",
+        amount: {{ t.amount|default:0 }} }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ];
 
-  const demoMerchants = ["Starbucks", "Amazon", "Uber", "Chipotle", "Spotify", "Apple Store", "Whole Foods", "Best Buy", "Nike", "Etsy"];
-  const demoCats = ["Food", "Transport", "Shopping", "Entertainment", "Groceries", "Bills"];
-
-  function randInt(min,max){return Math.floor(Math.random()*(max-min+1))+min}
-  function sample(arr){return arr[randInt(0,arr.length-1)]}
-  function fmt(n){return n.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}
-
-  let tx = serverTx.length ? serverTx : Array.from({length: randInt(7,14)}, () => ({
-    merchant: sample(demoMerchants),
-    category: sample(demoCats),
-    date: new Date(Date.now() - randInt(0,27)*86400000).toISOString().slice(0,10),
-    amount: Number((Math.random()*120+5).toFixed(2))
-  }));
-
-  // Render table
+  // Elements
   const tbody = document.getElementById('txBody');
-  tbody.innerHTML = tx.map(t => `
-    <tr>
-      <td class="p-3 font-medium">${t.merchant}</td>
-      <td class="p-3 opacity-80">${t.category}</td>
-      <td class="p-3 opacity-70">${t.date}</td>
-      <td class="p-3 text-right font-semibold">$${fmt(t.amount)}</td>
-    </tr>
-  `).join('');
-
-  // Stats
-  const total = tx.reduce((s,t)=>s+t.amount,0);
-  const remaining = Math.max(0, budget - total);
-  const pct = Math.min(100, Math.round((total / budget) * 100));
-  document.getElementById('totalSpent').textContent = `$${fmt(total)}`;
-  document.getElementById('remaining').textContent = `$${fmt(remaining)}`;
-  document.getElementById('txCount').textContent = tx.length;
-  document.getElementById('avgPerTx').textContent = `$${fmt(total/Math.max(1,tx.length))}`;
-
-  // Progress styling: green → orange → red
+  const totalSpentEl = document.getElementById('totalSpent');
+  const remainingEl = document.getElementById('remaining');
+  const txCountEl = document.getElementById('txCount');
+  const avgPerTxEl = document.getElementById('avgPerTx');
   const fill = document.getElementById('progressFill');
-  fill.style.width = pct + '%';
-  fill.style.background = 'linear-gradient(90deg, #22c55e 0%, #f59e0b 60%, #ef4444 100%)';
-  document.getElementById('progressLabel').textContent = pct + '%';
-
-  // Threshold badges & alerts
+  const progressLabel = document.getElementById('progressLabel');
   const badge = document.getElementById('thresholdBadge');
   const alerts = document.getElementById('alerts');
-  function pill(text, color){
-    badge.textContent = text;
-    badge.classList.remove('hidden');
-    badge.style.borderColor = color;
-    badge.style.color = color;
-    badge.style.background = color + '11';
-  }
-  function alert(text, color){
-    const el = document.createElement('div');
-    el.className = 'p-3 rounded-xl border';
-    el.style.borderColor = color;
-    el.style.background = color + '0F';
-    el.style.color = color;
-    el.textContent = text;
-    alerts.appendChild(el);
+  const sortKeyEl = document.getElementById('sortKey');
+  const sortDirEl = document.getElementById('sortDir');
+
+  // Animate progress changes
+  fill.style.transition = 'width .6s ease, background-color .3s ease';
+
+  function fmt(n){return Number(n).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}
+
+  function computeStats(rows){
+    const total = rows.reduce((s,t)=>s + Number(t.amount||0),0);
+    const remaining = Math.max(0, budget - total);
+    const pct = Math.max(0, Math.min(100, Math.round((total / (budget||1)) * 100)));
+
+    totalSpentEl.textContent = `$${fmt(total)}`;
+    remainingEl.textContent = `$${fmt(remaining)}`;
+    txCountEl.textContent = rows.length;
+    avgPerTxEl.textContent = `$${fmt(total/Math.max(1,rows.length))}`;
+
+    fill.style.width = pct + '%';
+    progressLabel.textContent = pct + '%';
+
+    // Dynamic color: green (<50%), yellow (50–74%), red (75%+)
+    const color = pct >= 75 ? '#ef4444' : (pct >= 50 ? '#f59e0b' : '#22c55e');
+    fill.style.background = color;
+
+    // Clear prior alerts
+    alerts.innerHTML = '';
+    badge.classList.add('hidden');
+
+    function pill(text, color){
+      badge.textContent = text;
+      badge.classList.remove('hidden');
+      badge.style.borderColor = color;
+      badge.style.color = color;
+      badge.style.background = color + '11';
+    }
+    function alert(text, color){
+      const el = document.createElement('div');
+      el.className = 'p-3 rounded-xl border';
+      el.style.borderColor = color;
+      el.style.background = color + '0F';
+      el.style.color = color;
+      el.textContent = text;
+      alerts.appendChild(el);
+    }
+
+    if (pct >= 75) {
+      pill('75%+ of budget', '#ef4444');
+      alert('Warning: You\'ve used over 75% of your budget. Consider pausing discretionary spending.', '#ef4444');
+    } else if (pct >= 50) {
+      pill('50%+ of budget', '#f59e0b');
+      alert('Heads up: You\'ve crossed 50% of your budget.', '#f59e0b');
+    } else if (pct >= 25) {
+      pill('25%+ of budget', '#0ea5e9');
+      alert('Nice tracking! You\'re at 25% of budget. Keep an eye on upcoming bills.', '#0ea5e9');
+    }
   }
 
-  if (pct >= 75) {
-    pill('75%+ of budget', '#ef4444');
-    alert('Warning: You\'ve used over 75% of your budget. Consider pausing discretionary spending.', '#ef4444');
-  } else if (pct >= 50) {
-    pill('50%+ of budget', '#f97316');
-    alert('Heads up: You\'ve crossed 50% of your budget.', '#f97316');
-  } else if (pct >= 25) {
-    pill('25%+ of budget', '#0ea5e9');
-    alert('Nice tracking! You\'re at 25% of budget. Keep an eye on upcoming bills.', '#0ea5e9');
+  function renderTable(rows){
+    if (!rows.length){
+      tbody.innerHTML = '<tr><td colspan="4" class="p-3 text-center opacity-70">No transactions found</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(t => `
+      <tr>
+        <td class="p-3 font-medium">${t.merchant}</td>
+        <td class="p-3 opacity-80">${t.category || ''}</td>
+        <td class="p-3 opacity-70">${t.date}</td>
+        <td class="p-3 text-right font-semibold">$${fmt(t.amount)}</td>
+      </tr>
+    `).join('');
   }
+
+  function sortRows(rows, key, dir){
+    const m = dir === 'asc' ? 1 : -1;
+    const arr = rows.slice();
+    arr.sort((a,b)=>{
+      let A,B;
+      if (key === 'date') { A = new Date(a.date); B = new Date(b.date); }
+      else if (key === 'amount') { A = Number(a.amount)||0; B = Number(b.amount)||0; }
+      else if (key === 'category') { A = (a.category||'').toLowerCase(); B = (b.category||'').toLowerCase(); }
+      else if (key === 'merchant') { A = (a.merchant||'').toLowerCase(); B = (b.merchant||'').toLowerCase(); }
+      else { A = 0; B = 0; }
+      if (A < B) return -1*m;
+      if (A > B) return 1*m;
+      return 0;
+    });
+    return arr;
+  }
+
+  function apply(){
+    const key = sortKeyEl.value || 'date';
+    const dir = sortDirEl.value || 'desc';
+    const sorted = sortRows(serverTx, key, dir);
+    renderTable(sorted);
+    computeStats(sorted);
+  }
+
+  // Toggle Add Goal form
+  const addBtn = document.getElementById('addGoalBtn');
+  const addForm = document.getElementById('addGoalForm');
+  const cancelBtn = document.getElementById('cancelAddGoal');
+  if (addBtn && addForm){ addBtn.addEventListener('click', ()=> addForm.classList.toggle('hidden')); }
+  if (cancelBtn && addForm){ cancelBtn.addEventListener('click', ()=> addForm.classList.add('hidden')); }
+
+  sortKeyEl.addEventListener('change', apply);
+  sortDirEl.addEventListener('change', apply);
+
+  // Initial render: default date DESC
+  apply();
 })();
 </script>
 {% endblock %}
