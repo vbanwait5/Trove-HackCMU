@@ -65,3 +65,15 @@ class Subscription(models.Model):
     def __str__(self):
         return f"{self.merchant} - {self.amount}/{self.billing_cycle}"
 
+class Account(models.Model):
+    # These fields must match the column names in your 'accounts' table.
+    official_name = models.CharField(max_length=255)
+    subtype = models.CharField(max_length=100)
+    # Add any other columns you might want to access from the table.
+
+    class Meta:
+        managed = False  # Tells Django not to manage this table's schema (e.g., migrations)
+        db_table = 'accounts' # The exact name of your existing table in the database
+
+    def __str__(self):
+        return self.official_name
