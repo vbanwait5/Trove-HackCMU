@@ -64,8 +64,9 @@
               style="background:#ffffff">+ Add Goal</button>
     </div>
 
-    <form id="addGoalForm" method="post" action="" class="hidden mb-4 p-4 rounded-xl border border-slate-200" style="background:#ffffff">
-      {% csrf_token %}
+    <form id="addGoalForm" method="post" action="{% url 'goals' %}" 
+      class="hidden mb-4 p-4 rounded-xl border border-slate-200" style="background:#ffffff">
+    {% csrf_token %}
       <div class="grid" style="grid-template-columns:repeat(4,minmax(0,1fr)); gap:.75rem; align-items:end;">
         <div>
           <label class="text-xs opacity-70">Category</label>
