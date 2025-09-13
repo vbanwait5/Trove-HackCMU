@@ -14,6 +14,10 @@ def dashboard(request):
         "cards": cards,
     })
 
+from django.template.loader import get_template
+t = get_template("layouts/base-auth.html")
+print(t.origin.name)
+
 
 @login_required
 def cards_view(request):
