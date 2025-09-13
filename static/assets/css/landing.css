@@ -25,7 +25,7 @@ body {
   --pc-sidebar-caption-color: #e8edf7;
   --pc-sidebar-border: none;
   --pc-header-background: rgba(var(--bs-body-bg-rgb), 0.7);
-  --pc-header-color: #5b6b79;
+  --pc-header-color: #5b6b79; /*#5b6b79*/
   --pc-header-shadow: none;
   --pc-card-box-shadow: 0 1px 20px 0 rgba(69,90,100,.08);
   --pc-header-submenu-background: #ffffff;

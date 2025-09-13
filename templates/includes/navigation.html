@@ -1,21 +1,25 @@
+
 {% load static %}
 
-
-<header class="pc-header">
-    <div class="header-wrapper"> <!-- [Mobile Media Block] start -->
-      <div class="me-auto pc-mob-drp">
+<header class="new-header">
+    <div class="d-flex align-items-center justify-content-between"> <!-- [Mobile Media Block] start -->
+      <div class="d-flex align-items-center">
         <ul class="list-unstyled">
           <!-- ======= Menu collapse Icon ===== -->
+          <!--
           <li class="pc-h-item pc-sidebar-collapse">
             <a href="#" class="pc-head-link ms-0" id="sidebar-hide">
               <i data-feather="menu"></i>
             </a>
           </li>
+          
           <li class="pc-h-item pc-sidebar-popup">
             <a href="#" class="pc-head-link ms-0" id="mobile-collapse">
               <i data-feather="menu"></i>
             </a>
           </li>
+          -->
+
           <li class="dropdown pc-h-item">
             <a
               class="pc-head-link dropdown-toggle arrow-none m-0 trig-drp-search"
@@ -33,9 +37,12 @@
               </form>
             </div>
           </li>
+          
+          
         </ul>
       </div>
       <!-- [Mobile Media Block end] -->
+
       <div class="ms-auto">
         <ul class="list-unstyled">
           <li class="dropdown pc-h-item">
@@ -50,7 +57,9 @@
               <i data-feather="bell"></i>
               <span class="badge bg-success pc-h-badge">3</span>
             </a>
+          <div class="d-flex align-items-center">
             <div class="dropdown-menu dropdown-notification dropdown-menu-end pc-h-dropdown">
+              
               <div class="dropdown-header d-flex align-items-center justify-content-between">
                 <h5 class="m-0">Notifications</h5>
                 <a href="#!" class="btn btn-link btn-sm">Mark all read</a>
@@ -145,6 +154,11 @@
               </div>
             </div>
           </li>
+        </ul>
+      </div>
+
+      <div class="d-flex align-items-center">
+        <ul class="list-unstyled">
           <li class="dropdown pc-h-item header-user-profile">
             <a
               class="pc-head-link dropdown-toggle arrow-none me-0"

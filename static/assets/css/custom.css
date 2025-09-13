@@ -1,5 +1,10 @@
-/*!
-
-Custom SCSS
-
-*/
+.new-header {
+    background-color: #94b8dc2b;
+    box-shadow: 0 2px 4px rgba(33, 33, 33, 0.545);
+    padding: 5px 20px;
+    position: relative;
+    top: 10;
+    width: 100%;
+    z-index: 1000;
+    transition: all 0.4s linear;
+}
