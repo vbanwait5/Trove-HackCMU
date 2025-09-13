@@ -19,9 +19,7 @@
   <!-- Filter Options -->
   <div class="mb-3">
     <span class="fw-semibold me-2">Filter Deals:</span>
-    <div id="dealFilters" class="d-inline-block">
-      <!-- Checkboxes are here -->
-    </div>
+    <div id="dealFilters" class="d-inline-block"></div>
   </div>
 
   <!-- Deals Grid -->
@@ -32,7 +30,7 @@
   <div id="dealsGrid" class="row g-4"></div>
 </div>
 
-{# Build the deals list from cards #}
+<!-- Build the deals array from cards -->
 {% for c in cards %}
   {% if c.welcome_bonus %}
     <script>
@@ -61,7 +59,7 @@
         (window._deals = window._deals || []).push({
           type: "perk",
           title: "{{ p.perk_name|escapejs }}",
-          subtitle: "{% if p.frequency %}{{ p.frequency|escapejs }}{% elif p.description %}{{ p.description|escapejs }}{% else %}{% endif %}",
+          subtitle: "{% if p.frequency %}{{ p.frequency|escapejs }}{% elif p.description %}{{ p.description|escapejs }}{% endif %}",
           card: "{{ c.card_name|escapejs }}",
           issuer: "{{ c.issuer|default:'—'|escapejs }}",
           expires: "{{ c.current_period.end_date|default_if_none:''|escapejs }}"
@@ -86,27 +84,27 @@
   {% endif %}
 {% endfor %}
 
+<!-- Render and filter deals (fixed JS) -->
 <script>
 (function(){
   const allDeals = (window._deals || []).filter(Boolean);
 
-  // 1. Get unique deal types/tags for filter checkboxes
-  const tags = Array.from(new Set(allDeals.map(d=>{
+  function getTag(d){
     if(d.type==='welcome') return 'Welcome';
     if(d.type==='perk') return 'Perk';
     if(d.type==='category') {
       if(d.title.includes('Travel')) return 'Travel';
-      if(d.title.includes('Food')) return 'Food';
-      if(d.title.includes('Entertainment')) return 'Entertainment';
-      return 'Misc';
+      return 'Food/Entertainment';
     }
-    return 'Other';
-  })));
+    return 'Food/Entertainment';
+  }
 
-  // 2. Render filter checkboxes
+  const tags = Array.from(new Set(allDeals.map(getTag)));
+
   const filterContainer = document.getElementById('dealFilters');
+  filterContainer.innerHTML = '';
   tags.forEach(tag=>{
-    const id = 'filter-'+tag;
+    const id = 'filter-'+tag.replace(/\s+/g, '');
     filterContainer.innerHTML += `
       <div class="form-check form-check-inline">
         <input class="form-check-input deal-filter" type="checkbox" id="${id}" value="${tag}" checked>
@@ -115,23 +113,12 @@
     `;
   });
 
-  // 3. Function to render deals based on selected filters
   function renderDeals() {
     const checked = Array.from(document.querySelectorAll('.deal-filter:checked')).map(i=>i.value);
     const grid = document.getElementById('dealsGrid');
     const count = document.getElementById('dealCount');
 
-    const filtered = allDeals.filter(d=>{
-      let tag = 'Other';
-      if(d.type==='welcome') tag='Welcome';
-      else if(d.type==='perk') tag='Perk';
-      else if(d.type==='category') {
-        if(d.title.includes('Travel')) tag='Travel';
-        else if(d.title.includes('Food')) tag='Food';
-        else tag='Misc';
-      }
-      return checked.includes(tag);
-    });
+    const filtered = allDeals.filter(d=> checked.includes(getTag(d)) );
 
     count.textContent = `${filtered.length} deal${filtered.length===1?'':'s'}`;
 
@@ -143,15 +130,7 @@
     grid.innerHTML = filtered.slice(0,24).map(d=>{
       const cap = [d.card,d.issuer].filter(Boolean).join(' • ');
       const exp = d.expires ? `Ends ${d.expires}` : '';
-      let tag = 'Other';
-      if(d.type==='welcome') tag='New User Bonus';
-      else if(d.type==='perk') tag='Perk';
-      else if(d.type==='category'){
-        if(d.title.includes('Travel')) tag='Travel';
-        else if(d.title.includes('Food')) tag='Food';
-        else if(d.title.includes('Entertainment')) tag='Entertainment'; 
-        else tag='Food/Entertainment';
-      }
+      const tag = getTag(d);
 
       return `
         <div class="col-12 col-md-6">
@@ -172,10 +151,7 @@
     }).join('');
   }
 
-  // 4. Initial render
   renderDeals();
-
-  // 5. Attach event listeners to checkboxes
   document.querySelectorAll('.deal-filter').forEach(cb=>{
     cb.addEventListener('change', renderDeals);
   });
