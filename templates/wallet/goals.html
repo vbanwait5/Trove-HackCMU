@@ -177,15 +177,45 @@
 
 <script>
 (function(){
-  const budget = Number("{{ budget|default:1000 }}") || 1000;
+  // --- Budget: sanitize to always be a number ---
+  const budget = (() => {
+    const raw = "{{ budget|default:1000 }}";
+    const num = parseFloat(String(raw).replace(/[^0-9.-]/g, ''));
+    return Number.isFinite(num) ? num : 1000;
+  })();
 
-  // Build from context only
+  // --- Transactions: sanitize amount values ---
   const serverTx = [
     {% for t in transactions %}
-      { merchant: "{{ t.merchant|escapejs }}",
+      {
+        merchant: "{{ t.merchant|escapejs }}",
         category: "{{ t.category|escapejs }}",
         date: "{{ t.date|escapejs }}",
-        amount: {{ t.amount|default:0 }} }{% if not forloop.last %},{% endif %}
+        amount: (function(v){
+          const s = String(v).replace(/[^0-9.-]/g,'');
+          const n = parseFloat(s);
+          return Number.isFinite(n) ? n : 0;
+        })("{{ t.amount|default_if_none:0 }}")
+      }{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ];
+
+  // --- Goals: use as fallback for progress if tx total is 0 ---
+  const serverGoals = [
+    {% for g in goals %}
+      {
+        category: "{{ g.category|escapejs }}",
+        current_spend: (function(v){
+          const s = String(v).replace(/[^0-9.-]/g,'');
+          const n = parseFloat(s);
+          return Number.isFinite(n) ? n : 0;
+        })("{{ g.current_spend|default_if_none:0 }}"),
+        limit: (function(v){
+          const s = String(v).replace(/[^0-9.-]/g,'');
+          const n = parseFloat(s);
+          return Number.isFinite(n) ? n : 0;
+        })("{{ g.limit_amount|default_if_none:0 }}")
+      }{% if not forloop.last %},{% endif %}
     {% endfor %}
   ];
 
@@ -207,10 +237,27 @@
 
   function fmt(n){return Number(n).toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}
 
+  // Compute totals with a robust fallback to goals if tx sum is 0
+  function getTotals(rows){
+    const totalTx = rows.reduce((s,t)=> s + (Number.isFinite(t.amount)? t.amount : Number(t.amount)||0), 0);
+    const totalGoalsSpend = serverGoals.reduce((s,g)=> s + (g.current_spend||0), 0);
+    const sumGoalLimits = serverGoals.reduce((s,g)=> s + (g.limit||0), 0);
+
+    // prefer transactions if they exist; otherwise use goals spend
+    const total = totalTx > 0 ? totalTx : totalGoalsSpend;
+
+    // prefer explicit budget; else use sum of goal limits (if any)
+    const effBudget = (Number.isFinite(budget) && budget > 0)
+                      ? budget
+                      : (sumGoalLimits > 0 ? sumGoalLimits : 1000);
+
+    return { total, effBudget };
+  }
+
   function computeStats(rows){
-    const total = rows.reduce((s,t)=>s + Number(t.amount||0),0);
-    const remaining = Math.max(0, budget - total);
-    const pct = Math.max(0, Math.min(100, Math.round((total / (budget||1)) * 100)));
+    const { total, effBudget } = getTotals(rows);
+    const remaining = Math.max(0, effBudget - total);
+    const pct = Math.max(0, Math.min(100, Math.round((total / (effBudget || 1)) * 100)));
 
     totalSpentEl.textContent = `$${fmt(total)}`;
     remainingEl.textContent = `$${fmt(remaining)}`;
@@ -220,11 +267,11 @@
     fill.style.width = pct + '%';
     progressLabel.textContent = pct + '%';
 
-    // Dynamic color: green (<50%), yellow (50–74%), red (75%+)
+    // Dynamic color
     const color = pct >= 75 ? '#ef4444' : (pct >= 50 ? '#f59e0b' : '#22c55e');
     fill.style.background = color;
 
-    // Clear prior alerts
+    // Clear alerts
     alerts.innerHTML = '';
     badge.classList.add('hidden');
 
@@ -254,6 +301,12 @@
     } else if (pct >= 25) {
       pill('25%+ of budget', '#0ea5e9');
       alert('Nice tracking! You\'re at 25% of budget. Keep an eye on upcoming bills.', '#0ea5e9');
+    }
+
+    // Debug once (safe to keep; remove if you want)
+    if (!window.__budgetDebugged){
+      console.log('[BudgetUsage] effBudget=', effBudget, 'total=', total, 'txCount=', rows.length, 'goals=', serverGoals);
+      window.__budgetDebugged = true;
     }
   }
 
@@ -307,8 +360,10 @@
   sortKeyEl.addEventListener('change', apply);
   sortDirEl.addEventListener('change', apply);
 
-  // Initial render: default date DESC
+  // Initial render
   apply();
 })();
 </script>
+
 {% endblock %}
+
