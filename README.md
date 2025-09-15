@@ -1,3 +1,3 @@
 HACKCMU 2025 - amy, veer, uma, charisse
 
-trove - mostly working
+Trove - A one stop shop for financial advice and analytics!
